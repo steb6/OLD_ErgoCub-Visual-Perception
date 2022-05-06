@@ -2,10 +2,11 @@ import queue
 import sys
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Queue
+from multiprocessing.managers import BaseManager
 
 from loguru import logger
 
-from utils.multiprocessing import DataManager, Signals
+# from utils.multiprocessing import DataManager, Signals
 
 logger.remove()
 logger.add(sys.stdout,
@@ -19,28 +20,37 @@ def _exception_handler(function):
         try:
             function(*args)
         except:
-            pm = DataManager(list(args[0]._networks.values()))
-            pm.write(signal=Signals.STOP, important=True)
-            logger.info('Caught an exception')
-            for net in args[0]._networks.values():
-                net.broadcast(pm)
+            # pm = DataManager(list(args[0]._networks.values()))
+            # pm.write(signal=Signals.STOP, important=True)
+
+            # for net in args[0]._networks.values():
+                # net.broadcast(pm)
             logger.exception('Exception Raised')
             exit(1)
 
     return wrapper
 
+in_queue = Queue(1)
+def get_queue():
+    return in_queue
 
 class Node(Process, ABC):
 
     def __init__(self, name, blocking=True):
         super(Process, self).__init__()
 
+        self.name = name
         self.blocking = blocking
 
-        self._in_queue = Queue(1)
-        self._networks = {}
+        BaseManager.register(self.name, callable=get_queue)
+        manager = BaseManager(address=('localhost', 50000), authkey=b'qwerty')
+        manager.start()
 
-        self.name = name
+        self._in_queue = getattr(manager, self.name)()
+
+        self._out_queues = {}
+
+
 
     def _startup(self):
         logger.info('Starting up...')
@@ -50,10 +60,8 @@ class Node(Process, ABC):
         logger.info('Waiting for source startup...')
 
         data = self._recv()
-        if data.ready(self.name):
-            self._send_all(data)
-        else:
-            raise RuntimeError('Cannot startup if the source node is not ready')
+
+        self._send_all(data)
 
         logger.info('Start up complete.')
 
@@ -62,10 +70,8 @@ class Node(Process, ABC):
 
         self.shutdown()
 
-        if data.stop(self.name):
-            self._send_all(data)
-        else:
-            raise RuntimeError('Last message should contain the stop signal')
+        self._send_all(data)
+
         logger.info('Shut down complete.')
 
     def _recv(self):
@@ -81,33 +87,14 @@ class Node(Process, ABC):
             return None
 
     def _send_all(self, data):
+        out_queues = self._out_queues
 
-        make_copy = True
-        if len(list(self._networks)) == 1:
-            make_copy = False
+        for out in out_queues:
 
-        for net in list(self._networks):
-
-            out_queues = self._networks[net].connections[self.name]
-            names = self._networks[net].map[self.name]
-
-            data = data.dispatch(net, make_copy)
-
-            for out, name in zip(out_queues, names):
-                try:
-                    old_data = out.get_nowait()
-                    if old_data.important():
-                        out.put(old_data)
-
-                except queue.Empty:
-                    pass
-                try:
-                    if data.important():
-                        out.put(data, timeout=10)
-                    else:
-                        out.put_nowait(data)
-                except queue.Full:
-                    pass
+            try:
+                out.put_nowait(data)
+            except queue.Full:
+                pass
 
     def startup(self):
         pass
@@ -127,8 +114,7 @@ class Node(Process, ABC):
         # This is to wait for the first message even in non-blocking mode
         data = self._recv()
         while True:
-            if data.stop(self.name):
-                break
+
             data = self.loop(data)
             self._send_all(data)
 
@@ -141,14 +127,8 @@ class Node(Process, ABC):
 
         self._shutdown(data)
 
+    def connect(self, name, queue):
+        self._out_queues[name] = queue
 
-pm = {
-    'network1': {
-        'node1': {'from1': 'msg', 'from2': 'msg'},  # messages for node 1
-        'node2': {'from1': 'msg', 'from2': 'msg'},
-    },
-    'network2': {
-        'node1': {'from1': 'msg', 'from2': 'msg'},
-        'node2': {'from1': 'msg', 'from2': 'msg'},
-    }
-}
+    def get_input(self):
+        return self._in_queue
