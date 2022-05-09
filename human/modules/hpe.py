@@ -3,9 +3,9 @@ import pickle
 from human.utils.misc import postprocess_yolo_output, homography, is_within_fov
 import einops
 import numpy as np
-
 from utils.output import VISPYVisualizer
 from utils.runner import Runner
+import cv2
 
 
 class HumanPoseEstimator:
@@ -146,7 +146,6 @@ class HumanPoseEstimator:
 if __name__ == "__main__":
     from human.utils.params import MetrabsTRTConfig, RealSenseIntrinsics
     from tqdm import tqdm
-    import cv2
     from utils.input import RealSense
     from multiprocessing import Queue, Process
 
@@ -173,6 +172,7 @@ if __name__ == "__main__":
                         "fps": 0,
                         "focus": True,
                         "actions": {},
-                        "distance": 0
+                        "distance": 0,
+                        "box": None
                         }
             output_queue.put((elements,))

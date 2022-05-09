@@ -155,3 +155,4 @@ engines
 /grasping/modules/segmentation/container/assets/
 /grasping/modules/shape_reconstruction/tensorrt/assets/
 /grasping/modules/shape_reconstruction/pytorch/checkpoint/
+grasping_BRUTTO

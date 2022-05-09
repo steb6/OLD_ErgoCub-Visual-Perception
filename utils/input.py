@@ -35,7 +35,7 @@ class RealSense:
     def read(self):
         frames = self.pipeline.wait_for_frames()
         # aligned_frames = self.align.process(frames)
-
+        #
         # depth_frame = aligned_frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
         # color_frame = aligned_frames.get_color_frame()
         # depth_frame = frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
