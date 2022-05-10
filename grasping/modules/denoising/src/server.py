@@ -1,3 +1,5 @@
+import subprocess
+
 import numpy as np
 
 from denoising.src.denoise import denoise
@@ -9,13 +11,27 @@ import time
 import socket
 
 
+def get_ip():
+
+    cmd1 = ['cat', '/etc/resolv.conf']
+    cmd2 = ['grep', 'nameserver']
+
+    ps1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE)
+    ps2 = subprocess.Popen(cmd2, stdin=ps1.stdout, stdout=subprocess.PIPE)
+
+    output = ps2.communicate()[0]
+
+    ip = output.strip()[11:].decode("utf-8")
+
+    return ip
+
 def main():
     print('Started')
     print('Connecting to process...')
     while True:
         try:  # moved this line here
             out_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            out_sock.connect(("172.18.128.1", 5052))  # no longer throws error - 172.30.160.1
+            out_sock.connect((get_ip(), 5052))  # no longer throws error - 172.30.160.1
             break
         except socket.error:
             pass
