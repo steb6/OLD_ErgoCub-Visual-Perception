@@ -2,6 +2,7 @@ from vispy import app, scene, visuals
 from vispy.scene.visuals import Text, Image
 import numpy as np
 import math
+import cv2
 
 
 class VISPYVisualizer:
@@ -92,7 +93,7 @@ class VISPYVisualizer:
         b4.camera = scene.PanZoomCamera(rect=(0, 0, 1, 1))
         b4.camera.interactive = False
         b4.border_color = (0.5, 0.5, 0.5, 1)
-        self.desc_add = Text('ADD ACTION: add action_name [-focus]', color='white', rotation=0, anchor_x="left",
+        self.desc_add = Text('ADD ACTION: add action_name [-focus][-box/nobox]', color='white', rotation=0, anchor_x="left",
                              anchor_y="bottom",
                              font_size=12, pos=(0.1, 0.9))
         self.desc_remove = Text('REMOVE ACTION: remove action_name', color='white', rotation=0, anchor_x="left",
@@ -129,6 +130,7 @@ class VISPYVisualizer:
             fps = elements["fps"]
             results = elements["actions"]
             distance = elements["distance"]
+            box = elements["box"]
 
             # POSE
             theta = 90
@@ -140,6 +142,8 @@ class VISPYVisualizer:
                 self.lines[i].set_data((pose[[edge[0], edge[1]]]))
 
             # IMAGE
+            x1, x2, y1, y2 = box
+            img = cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 1)
             self.image.set_data(img)
 
             # INFO
@@ -151,32 +155,35 @@ class VISPYVisualizer:
                 self.focus.color = "red"
             self.fps.text = "FPS: {:.2f}".format(fps)
             self.distance.text = "DIST: {:.2f}m".format(distance)
-            # Print action
-            i = 0
+
             m = max([_[0] for _ in results.values()]) if len(results) > 0 else 0
-            for r in results.keys():
-                score, requires_focus = results[r]
+            for i, r in enumerate(results.keys()):
+                score, requires_focus, requires_box = results[r]
+                # Check if conditions are satisfied
                 if score == m:
-                    if requires_focus:
-                        if focus:
-                            color = "green"
-                        else:
-                            color = "orange"
-                    else:
+                    c1 = True if not requires_focus else focus
+                    c2 = True if (requires_box is None) else (box == requires_box)
+                    if c1 and c2:
                         color = "green"
+                    else:
+                        color = "orange"
                 else:
                     color = "red"
                 if r in self.actions.keys():
+                    text = "{}: {:.2f}".format(r, score)
                     if requires_focus:
-                        self.actions[r].text = "{}: {:.2f} (0_0)".format(r, score)
-                    else:
-                        self.actions[r].text = "{}: {:.2f}".format(r, score)
+                        text += ' (0_0)'
+                    if requires_box:
+                        text += ' [ ]'
+                    if requires_box is not None and not requires_box:
+                        text += ' [X]'
+                    self.actions[r].text = text
                 else:
                     self.actions[r] = Text('', rotation=0, anchor_x="center", anchor_y="bottom", font_size=12)
                     self.b2.add(self.actions[r])
                 self.actions[r].pos = 0.5, 0.7 - (0.1 * i)
                 self.actions[r].color = color
-                i += 1
+
             # Remove erased action (if any)
             to_remove = []
             for key in self.actions.keys():

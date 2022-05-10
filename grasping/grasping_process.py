@@ -10,7 +10,7 @@ from utils.multiprocessing import Node
 
 class Grasping(Node):
     def __init__(self):
-        super().__init__(name='grasping')
+        super().__init__(name='grasping', port=50004)
 
     def startup(self):
         import pycuda.autoinit

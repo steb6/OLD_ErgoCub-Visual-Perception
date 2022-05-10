@@ -2,8 +2,9 @@ import cv2
 from human.assets.ptgaze.gaze_estimator import GazeEstimator
 from tqdm import tqdm
 from scipy.spatial.transform import Rotation
-
+import yaml
 from utils.input import RealSense
+import numpy as np
 
 
 class FocusDetector:
@@ -147,8 +148,6 @@ def convert_pt(point):
 
 
 if __name__ == "__main__":
-    import numpy as np
-    import yaml
     from human.utils.params import FocusConfig, RealSenseIntrinsics
 
     cap = RealSense(width=RealSenseIntrinsics().width, height=RealSenseIntrinsics().width)
