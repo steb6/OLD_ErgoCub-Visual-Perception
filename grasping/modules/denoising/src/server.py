@@ -1,8 +1,5 @@
 import subprocess
-
-import numpy as np
-
-from denoising.src.denoise import denoise
+from grasping.modules.denoising.src.denoise import denoise
 import atexit
 import gc
 import io

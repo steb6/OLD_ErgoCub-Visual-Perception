@@ -7,7 +7,7 @@ import socket
 from loguru import logger
 
 def get_ip():
-    cmd = ['Ubuntu1804', 'run', 'cat /etc/resolv.conf']
+    cmd = ['wsl', 'cat', '/etc/resolv.conf']
     ps = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     output = ps.communicate()[0]
 
@@ -28,7 +28,10 @@ class Denoising:
         self.startup()
 
     def startup(self):
-        cmd = ['wsl', '-d', 'Ubuntu-18.04', '.', '/home/arosasco/grasping/denoise2.sh']
+        import os
+        from pathlib import Path
+        p = (Path("/mnt/") / Path(os.getcwd()).as_posix().replace("C:", "c") / Path("grasping/denoising.bash")).as_posix()
+        cmd = ['wsl', p]
         popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
         for stdout_line in iter(popen.stdout.readline, ""):
             print(stdout_line)

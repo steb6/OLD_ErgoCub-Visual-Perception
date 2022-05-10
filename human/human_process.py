@@ -2,7 +2,7 @@ from human.modules.focus import FocusDetector
 from human.modules.ar import ActionRecognizer
 from human.modules.hpe import HumanPoseEstimator
 from human.utils.params import FocusConfig, MetrabsTRTConfig, RealSenseIntrinsics, TRXConfig
-from utils.multiprocessing import Node
+from utils.concurrency import Node
 import time
 import numpy as np
 import cv2
@@ -20,7 +20,7 @@ def run_module(module, configurations, input_queue, output_queue):
 
 class Human(Node):
     def __init__(self):
-        super().__init__(name='human', port=50002)
+        super().__init__(name='human')
         self.focus_in = None
         self.focus_out = None
         self.focus_proc = None

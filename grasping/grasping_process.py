@@ -5,12 +5,12 @@ import numpy as np
 
 from grasping.modules.utils.input import RealSense
 from grasping.modules.utils.timer import Timer
-from utils.multiprocessing import Node
+from utils.concurrency import Node
 
 
 class Grasping(Node):
     def __init__(self):
-        super().__init__(name='grasping', port=50004)
+        super().__init__(name='grasping')
 
     def startup(self):
         import pycuda.autoinit
