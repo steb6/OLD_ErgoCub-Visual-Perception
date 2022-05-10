@@ -36,14 +36,14 @@ def get_queue():
 
 class Node(Process, ABC):
 
-    def __init__(self, name, blocking=True):
+    def __init__(self, name, blocking=True, port=50000):
         super(Process, self).__init__()
 
         self.name = name
         self.blocking = blocking
 
         BaseManager.register(self.name, callable=get_queue)
-        manager = BaseManager(address=('localhost', 50000), authkey=b'qwerty')
+        manager = BaseManager(address=('localhost', port), authkey=b'qwerty')
         manager.start()
 
         self._in_queue = getattr(manager, self.name)()

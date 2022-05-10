@@ -14,7 +14,7 @@ def main():
     while True:
         try:  # moved this line here
             out_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            out_sock.connect(("172.30.160.1", 5052))  # no longer throws error - 172.30.160.1
+            out_sock.connect(("172.18.128.1", 5052))  # no longer throws error - 172.30.160.1
             break
         except socket.error:
             pass

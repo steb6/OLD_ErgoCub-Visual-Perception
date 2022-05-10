@@ -20,7 +20,7 @@ def run_module(module, configurations, input_queue, output_queue):
 
 class Human(Node):
     def __init__(self):
-        super().__init__(name='human')
+        super().__init__(name='human', port=50002)
         self.focus_in = None
         self.focus_out = None
         self.focus_proc = None

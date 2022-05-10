@@ -35,17 +35,17 @@ class RealSense:
     def read(self):
         frames = self.pipeline.wait_for_frames()
         # aligned_frames = self.align.process(frames)
-        #
+
         # depth_frame = aligned_frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
         # color_frame = aligned_frames.get_color_frame()
-        # depth_frame = frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
+        depth_frame = frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
         color_frame = frames.get_color_frame()
 
-        # depth_image = np.asanyarray(depth_frame.get_data())
+        depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
 
-        return True, color_image
-        # return color_image, depth_image
+        # return True, color_image
+        return color_image, depth_image
 
     def stop(self):
         self.pipeline.stop()

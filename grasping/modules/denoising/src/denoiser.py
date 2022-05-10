@@ -30,7 +30,7 @@ class Denoising:
 
         logger.info('Waiting incoming connections...')
         in_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        in_sock.bind(("172.24.176.1", 5052))
+        in_sock.bind(("172.18.128.1", 5052))
         in_sock.listen()
 
         self.in_sock = in_sock
