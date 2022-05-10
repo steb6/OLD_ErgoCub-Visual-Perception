@@ -19,8 +19,8 @@ from open3d.cpu.pybind.geometry import PointCloud, TriangleMesh
 from open3d.cpu.pybind.utility import Vector3dVector
 from open3d.cpu.pybind.visualization import Visualizer
 
-from utils.input import RealSense
-from utils.misc import draw_mask
+from grasping.modules.utils.input import RealSense
+from grasping.modules.utils.misc import draw_mask
 
 print = partial(print, flush=True)
 

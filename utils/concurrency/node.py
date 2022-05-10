@@ -30,9 +30,6 @@ def _exception_handler(function):
 
     return wrapper
 
-in_queue = Queue(1)
-def get_queue():
-    return in_queue
 
 class Node(Process, ABC):
 
@@ -42,11 +39,10 @@ class Node(Process, ABC):
         self.name = name
         self.blocking = blocking
 
-        BaseManager.register(self.name, callable=get_queue)
-        manager = BaseManager(address=('localhost', 50000), authkey=b'qwerty')
-        manager.start()
-
-        self._in_queue = getattr(manager, self.name)()
+        BaseManager.register('get_queue')
+        manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
+        manager.connect()
+        self._in_queue = manager.get_queue(self.name)
 
         self._out_queues = {}
 

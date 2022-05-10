@@ -6,6 +6,14 @@ import socket
 
 from loguru import logger
 
+def get_ip():
+    cmd = ['Ubuntu1804', 'run', 'cat /etc/resolv.conf']
+    ps = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    output = ps.communicate()[0]
+
+    ip = output.strip()[185:].decode("utf-8")
+    return ip
+
 
 class Denoising:
 
@@ -30,7 +38,7 @@ class Denoising:
 
         logger.info('Waiting incoming connections...')
         in_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        in_sock.bind(("172.24.176.1", 5052))
+        in_sock.bind((get_ip(), 5052))
         in_sock.listen()
 
         self.in_sock = in_sock
