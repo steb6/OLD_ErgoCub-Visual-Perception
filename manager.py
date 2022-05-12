@@ -3,7 +3,7 @@ from collections import defaultdict
 from queue import Queue
 
 
-queues = defaultdict(Queue)
+queues = defaultdict(lambda: Queue(1))
 
 
 def get_queue(name):

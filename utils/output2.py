@@ -59,8 +59,9 @@ class VISPYVisualizer:
         self.scatter2 = Markers()
         b4.add(self.scatter2)
 
-
     def on_timer(self, _):
+        if not self.show:
+            return
 
         data = self.input_queue.get()
 
