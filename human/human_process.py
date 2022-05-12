@@ -58,7 +58,7 @@ class Human(Node):
         self.last_poses = []
 
         # Create output
-        self.visualizer = True
+        self.visualizer = False
         if self.visualizer:
             self.input_queue = Queue(1)
             self.output_queue = Queue(1)

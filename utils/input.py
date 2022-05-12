@@ -59,7 +59,7 @@ class RealSense:
         return self.profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
 
     def read(self):
-        frames = self.pipeline.wait_for_frames()
+        frames = self.pipeline.wait_for_frames(5000)
         aligned_frames = self.align.process(frames)
 
         depth_frame = aligned_frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image

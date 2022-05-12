@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from grasping.modules.utils.input import RealSense
+from grasping.modules.utils.misc import draw_mask
 from grasping.modules.utils.timer import Timer
 from utils.concurrency import Node
 from utils.output2 import VISPYVisualizer
@@ -13,7 +14,7 @@ from utils.output2 import VISPYVisualizer
 
 class Grasping(Node):
     def __init__(self):
-        super().__init__(name='grasping', port=50004)
+        super().__init__(name='grasping')
 
     def startup(self):
         import pycuda.autoinit
@@ -22,14 +23,14 @@ class Grasping(Node):
         from grasping.modules.ransac.utils.inference import Runner
         from grasping.modules.shape_reconstruction.tensorrt.utils.inference import Infer as InferPcr
 
-        # self.vis_queue = Queue(1)
-        # vis_proc = Process(target=VISPYVisualizer.create_visualizer,
-        #                       args=(self.vis_queue,))
-        # vis_proc.start()
+        self.vis_queue = Queue(1)
+        vis_proc = Process(target=VISPYVisualizer.create_visualizer,
+                              args=(self.vis_queue,))
+        vis_proc.start()
 
         a = torch.zeros([1]).to('cuda')
         print('Loading Shape Reconstruction engine')
-        self.backbone = InferPcr('./grasping/modules/shape_reconstruction/tensorrt/assets/pcr.engine')
+        self.backbone = InferPcr('grasping/modules/shape_reconstruction/tensorrt/assets/final.engine')
         print('Shape Reconstruction engine loaded')
 
         from grasping.modules.segmentation.tensorrt.utils.inference import Infer as InferSeg
@@ -147,29 +148,29 @@ class Grasping(Node):
         outputs = {'mask': mask, 'partial': size_pc, 'reconstruction': (res * np.array([1, 1, -1]) * (var * 2) + mean),
                 'grasp_poses': poses, 'distance': distance}
 
-        # mask, partial, reconstruction, poses, distance = \
-        #     outputs['mask'], outputs['partial'], outputs['reconstruction'], outputs['grasp_poses'], outputs['distance']
-        #
-        # # Visualization
-        #
-        # res1, res2 = draw_mask(rgb, mask)
-        #
-        # font = cv2.FONT_ITALIC
-        # bottomLeftCornerOfText = (10, 30)
-        # fontScale = 1
-        # fontColor = (255, 255, 255)
-        # thickness = 1
-        # lineType = 2
-        #
-        # cv2.putText(res2, f'Distance: {distance / 1000}',
-        #             bottomLeftCornerOfText,
-        #             font,
-        #             fontScale,
-        #             fontColor,
-        #             thickness,
-        #             lineType)
+        mask, partial, reconstruction, poses, distance = \
+            outputs['mask'], outputs['partial'], outputs['reconstruction'], outputs['grasp_poses'], outputs['distance']
 
-        # self.vis_queue.put({'res1': cv2.flip(res1, 0), 'res2': cv2.flip(res2, 0), 'pc1': partial, 'pc2': reconstruction})
+        # Visualization
+
+        res1, res2 = draw_mask(rgb, mask)
+
+        font = cv2.FONT_ITALIC
+        bottomLeftCornerOfText = (10, 30)
+        fontScale = 1
+        fontColor = (255, 255, 255)
+        thickness = 1
+        lineType = 2
+
+        cv2.putText(res2, f'Distance: {distance / 1000}',
+                    bottomLeftCornerOfText,
+                    font,
+                    fontScale,
+                    fontColor,
+                    thickness,
+                    lineType)
+
+        self.vis_queue.put({'res1': cv2.flip(res1, 0), 'res2': cv2.flip(res2, 0), 'pc1': partial, 'pc2': reconstruction})
 
         fps = 1 / (time.perf_counter() - start)
         print('\r')
