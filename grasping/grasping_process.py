@@ -23,11 +23,6 @@ class Grasping(Node):
         from grasping.modules.ransac.utils.inference import Runner
         from grasping.modules.shape_reconstruction.tensorrt.utils.inference import Infer as InferPcr
 
-        self.vis_queue = Queue(1)
-        vis_proc = Process(target=VISPYVisualizer.create_visualizer,
-                              args=(self.vis_queue,))
-        vis_proc.start()
-
         a = torch.zeros([1]).to('cuda')
         print('Loading Shape Reconstruction engine')
         self.backbone = InferPcr('grasping/modules/shape_reconstruction/tensorrt/assets/final.engine')
@@ -136,47 +131,29 @@ class Grasping(Node):
                 mean = 0
                 var = 1
                 res = np.array([[0, 0, 0]])
-                size_pc = np.array([[0, 0, 0]])
+                normalized_pc = np.array([[0, 0, 0]])
         else:
             print('Warning: not enough input points. Skipping reconstruction')
             poses = None
             mean = 0
             var = 1
             res = np.array([[0, 0, 0]])
-            size_pc = np.array([[0, 0, 0]])
+            normalized_pc = np.array([[0, 0, 0]])
 
-        outputs = {'mask': mask, 'partial': size_pc, 'reconstruction': (res * np.array([1, 1, -1]) * (var * 2) + mean),
-                'grasp_poses': poses, 'distance': distance}
-
-        mask, partial, reconstruction, poses, distance = \
-            outputs['mask'], outputs['partial'], outputs['reconstruction'], outputs['grasp_poses'], outputs['distance']
+        # outputs = {'mask': mask, 'partial': size_pc, 'reconstruction': (res * np.array([1, 1, -1]) * (var * 2) + mean),
+        #         'grasp_poses': poses, 'distance': distance}
 
         # Visualization
-
-        res1, res2 = draw_mask(rgb, mask)
-
-        font = cv2.FONT_ITALIC
-        bottomLeftCornerOfText = (10, 30)
-        fontScale = 1
-        fontColor = (255, 255, 255)
-        thickness = 1
-        lineType = 2
-
-        cv2.putText(res2, f'Distance: {distance / 1000}',
-                    bottomLeftCornerOfText,
-                    font,
-                    fontScale,
-                    fontColor,
-                    thickness,
-                    lineType)
-
-        self.vis_queue.put({'res1': cv2.flip(res1, 0), 'res2': cv2.flip(res2, 0), 'pc1': partial, 'pc2': reconstruction})
 
         fps = 1 / (time.perf_counter() - start)
         print('\r')
         for k, v in Timer.counters.items():
             print(f'{k}: {1 / (Timer.timers[k] / v)}', end=' ')
         print(f'tot: {fps}', end=' ')
+
+        return {'rgb': rgb, 'mask': mask, 'distance': distance, 'partial': normalized_pc, 'reconstruction': res,
+                'mean': mean, 'var': var}
+
         # cv2.imshow('Segmentation 1', cv2.cvtColor(res1, cv2.COLOR_RGB2BGR))
         # cv2.imshow('Segmentation 2', cv2.cvtColor(res2, cv2.COLOR_RGB2BGR))
         # cv2.imshow('Segmentation 1', res1)

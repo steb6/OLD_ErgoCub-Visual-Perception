@@ -57,15 +57,6 @@ class Human(Node):
         self.fps_s = []
         self.last_poses = []
 
-        # Create output
-        self.visualizer = False
-        if self.visualizer:
-            self.input_queue = Queue(1)
-            self.output_queue = Queue(1)
-            self.output_proc = Process(target=VISPYVisualizer.create_visualizer,
-                                       args=(self.output_queue, self.input_queue))
-            self.output_proc.start()
-
     def loop(self, data):
         img = data['rgb']
         start = time.time()
@@ -98,27 +89,23 @@ class Human(Node):
         end = time.time()
 
         # Compute fps
-        self.fps_s.append(1. / (end - start))
+        self.fps_s.append(1. / (end - start) if (end-start) != 0 else 0)
         fps_s = self.fps_s[-10:]
         fps = sum(fps_s) / len(fps_s)
 
-        if self.visualizer:
-            if pose3d_abs is not None:
-                # Send to visualizer
-                img = cv2.flip(img, 0)
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                elements = {"img": img,
-                            "pose": pose3d_root,
-                            "edges": edges,
-                            "fps": fps,
-                            "focus": focus,
-                            "actions": results,
-                            "distance": d * 2,  # TODO fix
-                            "box": bbox
-                            }
-                self.output_queue.put((elements,))
+        img = cv2.flip(img, 0)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        elements = {"img": img,
+                    "pose": pose3d_root,
+                    "edges": edges,
+                    "fps": fps,
+                    "focus": focus,
+                    "actions": results,
+                    "distance": d,  # TODO fix
+                    "box": bbox
+                    }
 
-        return img, pose3d_root, results
+        return elements
 
     def shutdown(self):
         pass

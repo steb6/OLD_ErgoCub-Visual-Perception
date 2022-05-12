@@ -5,6 +5,7 @@ from multiprocessing import Process, Queue
 from multiprocessing.managers import BaseManager
 
 from loguru import logger
+from queue import Empty
 
 # from utils.multiprocessing import DataManager, Signals
 
@@ -44,7 +45,7 @@ class Node(Process, ABC):
         manager.connect()
         self._in_queue = manager.get_queue(self.name)
 
-        self._out_queues = {}
+        self._out_queue = manager.get_queue(f'vis_in_{self.name}')
 
 
 
@@ -57,7 +58,7 @@ class Node(Process, ABC):
 
         data = self._recv()
 
-        self._send_all(data)
+        # self._send_all(data)
 
         logger.info('Start up complete.')
 
@@ -66,7 +67,7 @@ class Node(Process, ABC):
 
         self.shutdown()
 
-        self._send_all(data)
+        # self._send_all(data)
 
         logger.info('Shut down complete.')
 
@@ -83,14 +84,13 @@ class Node(Process, ABC):
             return None
 
     def _send_all(self, data):
-        out_queues = self._out_queues
-
-        for out in out_queues:
-
+        while not self._out_queue.empty():
             try:
-                out.put_nowait(data)
-            except queue.Full:
-                pass
+                self._out_queue.get(block=False)
+            except Empty:
+                break
+
+        self._out_queue.put(data)
 
     def startup(self):
         pass

@@ -171,7 +171,7 @@ def order_planes(centers, planes):
 
 def line_plane(line, plane):
     a = np.argmax(plane[:3])
-    if plane[a] == 0:
+    if plane[a] == 0:  # TODO FIX FIX FIX FIX FIX FIX FIX FIX FIX
         raise ValueError('Division by zero')
     p0 = np.zeros([3])
     p0[a] = -plane[3] / plane[a]

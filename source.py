@@ -38,22 +38,28 @@ def main():
     for proc in processes:
         processes[proc] = manager.get_queue(proc)
 
-    camera = RealSense(color_format=rs.format.rgb8, fps=30)
 
+    camera = RealSense(color_format=rs.format.rgb8, fps=30)
     logger.info('Streaming to the connected processes...')
 
     fps = 0
     i = 0
     while True:
-        start = time.perf_counter()
-        rgb, depth = camera.read()
+        try:
 
-        for queue in processes.values():
-            send(queue, {'rgb': rgb, 'depth': depth})
+            while True:
+                start = time.perf_counter()
+                rgb, depth = camera.read()
 
-        fps += 1 / (time.perf_counter() - start)
-        i += 1
-        print('\r', fps/i, end='')
+                for queue in processes.values():
+                    send(queue, {'rgb': rgb, 'depth': depth})
+
+                fps += 1 / (time.perf_counter() - start)
+                i += 1
+                print('\r', fps/i, end='')
+        except RuntimeError:
+            logger.error("Realsense: frame didn't arrive")
+            camera = RealSense(color_format=rs.format.rgb8, fps=30)
 
 
 def set_name(name):

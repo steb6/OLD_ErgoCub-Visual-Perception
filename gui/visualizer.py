@@ -10,6 +10,8 @@ import math
 import sys
 from loguru import logger
 
+from grasping.modules.utils.misc import draw_mask
+
 logger.remove()
 logger.add(sys.stdout,
            format="<fg #b28774>{time:YYYY-MM-DD HH:mm:ss:SSS ZZ}</> <yellow>|</>"
@@ -112,19 +114,18 @@ class Visualizer(Process):
 
         # Point Cloud 1
         b3 = self.grid.add_view(row=2, col=0)
-        b3.camera = 'turntable'
+        b3.camera = scene.TurntableCamera(distance=1)
         b3.border_color = (0.5, 0.5, 0.5, 1)
-        self.scatter1 = Markers()
-        b3.add(self.scatter1)
+        self.scatter1 = Markers(parent=b3.scene)
+        self.scatter2 = Markers(parent=b3.scene)
         b3.events.mouse_press.connect(self.highlight)
         self.widgets.append(b3)
 
         # Point Cloud 2
         b4 = self.grid.add_view(row=3, col=0)
-        b4.camera = 'turntable'
+        b4.camera = scene.TurntableCamera(distance=1)
         b4.border_color = (0.5, 0.5, 0.5, 1)
-        self.scatter2 = Markers()
-        b4.add(self.scatter2)
+
         b4.events.mouse_press.connect(self.highlight)
         self.widgets.append(b4)
                 ######################
@@ -225,14 +226,37 @@ class Visualizer(Process):
         if not self.show:
             return
 
+        theta = 90
+        R = np.array([[1, 0, 0],
+                       [0, math.cos(theta), -math.sin(theta)],
+                       [0, math.sin(theta), math.cos(theta)]])
+
         ##################
         #### Grasping ####
         ##################
         data = self.grasping_in.get()
-        self.image1.set_data(data['res1'])
-        self.image2.set_data(data['res2'])
-        self.scatter1.set_data(data['pc1'], edge_color=None, face_color=(1, 1, 1, .5), size=5)
-        self.scatter2.set_data(data['pc2'], edge_color=None, face_color=(1, 1, 1, .5), size=5)
+
+        res1, res2 = draw_mask(data['rgb'], data['mask'])
+
+        font = cv2.FONT_ITALIC
+        bottomLeftCornerOfText = (10, 30)
+        fontScale = 1
+        fontColor = (255, 255, 255)
+        thickness = 1
+        lineType = 2
+
+        cv2.putText(res2, 'Distance: {:.2f}'.format(data["distance"] / 1000),
+                    bottomLeftCornerOfText,
+                    font,
+                    fontScale,
+                    fontColor,
+                    thickness,
+                    lineType)
+
+        self.image1.set_data(res1[::-1, ..., ::-1])
+        self.image2.set_data(res2[::-1, ..., ::-1])
+        self.scatter1.set_data((data['partial'] @ R) * np.array([1, 1, -1]), edge_color='orange', face_color='orange', size=5)
+        self.scatter2.set_data((data['reconstruction'] @ R) * np.array([1, 1, -1]), edge_color='blue', face_color='blue', size=5)
 
         ##################
         ##### Human ######
@@ -242,7 +266,6 @@ class Visualizer(Process):
         if not data:
             return
 
-        data = data[0]
         if "log" in data:
             self.log.text = data["log"]
         else:
@@ -256,29 +279,41 @@ class Visualizer(Process):
             box = data["box"]
 
             # POSE
-            theta = 90
-            R = np.matrix([[1, 0, 0],
-                           [0, math.cos(theta), -math.sin(theta)],
-                           [0, math.sin(theta), math.cos(theta)]])
-            pose = pose @ R
-            for i, edge in enumerate(edges):
-                self.lines[i].set_data((pose[[edge[0], edge[1]]]))
+            if pose is not None:
+                theta = 90
+                R = np.matrix([[1, 0, 0],
+                               [0, math.cos(theta), -math.sin(theta)],
+                               [0, math.sin(theta), math.cos(theta)]])
+                pose = pose @ R
+                for i, edge in enumerate(edges):
+                    self.lines[i].set_data((pose[[edge[0], edge[1]]]))
 
             # IMAGE
-            x1, x2, y1, y2 = box
-            img = cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 1).astype(np.uint8)
-            self.image.set_data(img)
+            if img is not None:
+                if box is not None:
+                    x1, x2, y1, y2 = box
+                    img = cv2.rectangle(cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
+                                        (x1, x2), (y1, y2), (255, 0, 0), 1).astype(np.uint8)
+                self.image.set_data(img)
 
             # INFO
-            if focus:
-                self.focus.text = "FOCUS"
-                self.focus.color = "green"
-            else:
-                self.focus.text = "NOT FOCUS"
-                self.focus.color = "red"
-            self.fps.text = "FPS: {:.2f}".format(fps)
-            self.distance.text = "DIST: {:.2f}m".format(distance)
+            if focus is not None:
+                if focus:
+                    self.focus.text = "FOCUS"
+                    self.focus.color = "green"
+                else:
+                    self.focus.text = "NOT FOCUS"
+                    self.focus.color = "red"
 
+            # FPS
+            if fps is not None:
+                self.fps.text = "FPS: {:.2f}".format(fps)
+
+            # Distance
+            if distance is not None:
+                self.distance.text = "DIST: {:.2f}m".format(distance)
+
+            # Actions
             m = max([_[0] for _ in results.values()]) if len(results) > 0 else 0
             for i, r in enumerate(results.keys()):
                 score, requires_focus, requires_box = results[r]
@@ -358,9 +393,5 @@ def human():
 
 if __name__ == '__main__':
 
-    Process(target=grasping).start()
-    Process(target=human).start()
-
     viz = Visualizer()
-    viz.start()
-    viz.join()
+    viz.run()
