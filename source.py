@@ -59,6 +59,10 @@ def main():
                 print('\r', fps/i, end='')
         except RuntimeError:
             logger.error("Realsense: frame didn't arrive")
+            # ctx = rs.context()
+            # devices = ctx.query_devices()
+            # for dev in devices:
+            #     dev.hardware_reset()
             camera = RealSense(color_format=rs.format.rgb8, fps=30)
 
 

@@ -125,6 +125,7 @@ class Visualizer(Process):
         b4.camera = scene.TurntableCamera(elevation=0, azimuth=0, distance=0.5)
         b4.border_color = (0.5, 0.5, 0.5, 1)
         self.scatter3 = Markers(parent=b4.scene)
+        self.scatter4 = Markers(parent=b4.scene)
         axis = scene.XYZAxis(parent=b4.scene)
         b4.events.mouse_press.connect(self.highlight)
         self.widgets.append(b4)
@@ -225,12 +226,14 @@ class Visualizer(Process):
                     thickness,
                     lineType)
 
+        R = Rotation.from_euler('xyz', [-90, 0, 0], degrees=True).as_matrix()
         self.image1.set_data(res1[::-1, ..., ::-1])
         self.image2.set_data(res2[::-1, ..., ::-1])
-        self.scatter1.set_data((data['partial'] @ Rotation.from_euler('xyz', [270, 0, 0], degrees=True).as_matrix()) * np.array([1, -1, 1]), edge_color='orange', face_color='orange', size=5)
-        self.scatter2.set_data((data['reconstruction'] @ Rotation.from_euler('xyz', [270, 0, 0], degrees=True).as_matrix()) * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
-        self.scatter3.set_data(((data['scene'][..., :3] - data['mean']) @ Rotation.from_euler('xyz', [270, 0, 0], degrees=True).as_matrix()), edge_color=data['scene'][..., 3:], face_color=data['scene'][..., 3:])
-
+        self.scatter1.set_data((data['partial'] @ R) * np.array([1, -1, 1]), edge_color='orange', face_color='orange', size=5)
+        self.scatter2.set_data((data['reconstruction'] @ R) * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
+        self.scatter3.set_data((data['scene'][..., :3]) @ R, edge_color=data['scene'][..., 3:], face_color=data['scene'][..., 3:])
+        # (data['reconstruction']) * (data['var'] * 2) + data['mean'])@R * np.array([1, -1, 1])
+        self.scatter4.set_data(((data['reconstruction']) * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
 
         ##################
         ##### Human ######
