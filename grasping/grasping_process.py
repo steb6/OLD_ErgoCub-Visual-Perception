@@ -25,7 +25,7 @@ class Grasping(Node):
 
         a = torch.zeros([1]).to('cuda')
         print('Loading Shape Reconstruction engine')
-        self.backbone = InferPcr('grasping/modules/shape_reconstruction/tensorrt/assets/final.engine')
+        self.backbone = InferPcr('grasping/modules/shape_reconstruction/tensorrt/assets/pcr.engine')
         print('Shape Reconstruction engine loaded')
 
         from grasping.modules.segmentation.tensorrt.utils.inference import Infer as InferSeg
@@ -151,71 +151,15 @@ class Grasping(Node):
             print(f'{k}: {1 / (Timer.timers[k] / v)}', end=' ')
         print(f'tot: {fps}', end=' ')
 
-        return {'rgb': rgb, 'mask': mask, 'distance': distance, 'partial': normalized_pc, 'reconstruction': res,
+        o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
+        return {'rgb': rgb, 'mask': mask, 'distance': distance, 'partial': normalized_pc,
+                'scene': np.concatenate([np.array(o3d_scene.points), np.array(o3d_scene.colors)], axis=1), 'reconstruction': res,
                 'mean': mean, 'var': var}
-
-        # cv2.imshow('Segmentation 1', cv2.cvtColor(res1, cv2.COLOR_RGB2BGR))
-        # cv2.imshow('Segmentation 2', cv2.cvtColor(res2, cv2.COLOR_RGB2BGR))
-        # cv2.imshow('Segmentation 1', res1)
-        # cv2.imshow('Segmentation 2', res2)
-        #
-        # cv2.waitKey(1)
-
-
-        # if poses is not None:
-        #     best_centers = (poses[0], poses[2])
-        #     best_rots = (poses[1], poses[3])
-        #     size = 0.1
-        # else:
-        #     best_centers = (np.zeros([3]), np.zeros([3]))
-        #     best_rots = (np.zeros([3, 3]), np.zeros([3, 3]))
-        #     size = 0.01
-        #
-        # # Orient poses
-        # for c, R, coord_mesh in zip(best_centers, best_rots, self.coords_mesh):
-        #     coord_mesh_ = TriangleMesh.create_coordinate_frame(size=size, origin=[0, 0, 0]) \
-        #         .rotate(R, center=[0, 0, 0]).translate(c, relative=False)
-        #
-        #     # Update mesh
-        #     coord_mesh.triangles = coord_mesh_.triangles
-        #     coord_mesh.vertices = coord_mesh_.vertices
-        #
-        # scene_pc = RealSense.rgb_pointcloud(depth, rgb)
-        #
-        # part_pc = PointCloud()
-        # part_pc.points = Vector3dVector(partial)  # + [0, 0, 1]
-        # part_pc.paint_uniform_color([0, 1, 0])
-        # pred_pc = PointCloud()
-        # pred_pc.points = Vector3dVector(reconstruction)
-        # pred_pc.paint_uniform_color([1, 0, 0])
-        #
-        # self.scene_pcd.clear()
-        # self.part_pcd.clear()
-        # self.pred_pcd.clear()
-        #
-        # self.scene_pcd += scene_pc
-        # self.part_pcd += part_pc
-        # self.pred_pcd += pred_pc
-        #
-        # if not self.render_setup:
-        #     self.vis2.add_geometry(self.scene_pcd)
-        #     self.vis.add_geometry(self.part_pcd)
-        #     self.vis.add_geometry(self.pred_pcd)
-        #     for pose in self.coords_mesh:
-        #         self.vis.add_geometry(pose)
-        #
-        #     render_setup = True
-        #
-        # self.vis2.update_geometry(self.scene_pcd)
-        # self.vis.update_geometry(self.part_pcd)
-        # self.vis.update_geometry(self.pred_pcd)
-        # for pose in self.coords_mesh:
-        #     self.vis2.update_geometry(pose)
-        #
-        # self.vis.poll_events()
-        # self.vis.update_renderer()
-        # self.vis2.poll_events()
-        # self.vis2.update_renderer()
 
     def shutdown(self):
         pass
+
+
+if __name__ == '__main__':
+    grasping = Grasping()
+    grasping.run()
