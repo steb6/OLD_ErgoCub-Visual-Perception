@@ -153,7 +153,7 @@ class Visualizer(Process):
         self.widgets.append(b5)
 
         # Info
-        self.b6 = self.grid.add_view(row=1, col=3)
+        self.b6 = self.grid.add_view(row=1, col=3, row_span=2)
         self.b6.camera = scene.PanZoomCamera(rect=(0, 0, 1, 1))
         self.b6.camera.interactive = False
         self.b6.border_color = (0.5, 0.5, 0.5, 1)
@@ -185,41 +185,11 @@ class Visualizer(Process):
         b8.camera = scene.PanZoomCamera(rect=(0, 0, 1, 1))
         b8.camera.interactive = False
         b8.border_color = (0.5, 0.5, 0.5, 1)
-        self.desc_add = Text('ADD ACTION: add action_name [-focus][-box/nobox]', color='white', rotation=0,
-                             anchor_x="left",
-                             anchor_y="bottom",
-                             font_size=12, pos=(0.1, 0.9))
-        self.desc_remove = Text('REMOVE ACTION: remove action_name', color='white', rotation=0, anchor_x="left",
-                                anchor_y="bottom",
-                                font_size=12, pos=(0.1, 0.7))
-        self.input_string = Text(self.input_text, color='purple', rotation=0, anchor_x="left", anchor_y="bottom",
-                                 font_size=12, pos=(0.1, 0.5))
-        self.log = Text('', color='orange', rotation=0, anchor_x="left", anchor_y="bottom",
-                        font_size=12, pos=(0.1, 0.3))
-        b8.add(self.desc_add)
-        b8.add(self.desc_remove)
-        b8.add(self.input_string)
-        b8.add(self.log)
         b8.events.mouse_press.connect(self.highlight)
         self.widgets.append(b8)
 
         self.center = self.grid.add_view(row=0, col=1, row_span=4, col_span=2)
         logger.debug('Gui built successfully')
-
-    def printer(self, x):
-        if x.text == '\b':
-            if len(self.input_text) > 1:
-                self.input_text = self.input_text[:-1]
-            self.log.text = ''
-        elif x.text == '\r':
-            self.human_out.put(self.input_text[1:])  # Do not send '<'
-            self.input_text = '>'
-            self.log.text = ''
-        elif x.text == '\\':
-            self.show = not self.show
-        else:
-            self.input_text += x.text
-        self.input_string.text = self.input_text
 
     def on_timer(self, _):
 
@@ -276,7 +246,8 @@ class Visualizer(Process):
             fps = data["fps"]
             results = data["actions"]
             distance = data["distance"]
-            box = data["box"]
+            human_bbox = data["human_bbox"]
+            face_bbox = data["face_bbox"]
 
             # POSE
             if pose is not None:
@@ -290,10 +261,15 @@ class Visualizer(Process):
 
             # IMAGE
             if img is not None:
-                if box is not None:
-                    x1, x2, y1, y2 = box
-                    img = cv2.rectangle(cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
-                                        (x1, x2), (y1, y2), (255, 0, 0), 1).astype(np.uint8)
+                if human_bbox is not None:
+                    x1, x2, y1, y2 = human_bbox
+                    img = cv2.rectangle(img,
+                                        (x1, y1), (x2, y2), (0, 0, 255), 1).astype(np.uint8)
+                if face_bbox is not None:
+                    x1, y1, x2, y2 = face_bbox.bbox.reshape(-1)
+                    img = cv2.rectangle(img,
+                                        (x1, y1), (x2, y2), (255, 0, 0), 1).astype(np.uint8)
+                img = cv2.flip(img, 0)
                 self.image.set_data(img)
 
             # INFO

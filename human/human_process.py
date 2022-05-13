@@ -65,13 +65,14 @@ class Human(Node):
         focus = False
 
         self.hpe_in.put(img)
-        self.focus_in.put(img)
+        # self.focus_in.put(img)
 
-        pose3d_abs, edges, bbox = self.hpe_out.get()
-        focus_ret = self.focus_out.get()
+        pose3d_abs, edges, human_bbox = self.hpe_out.get()
+        # focus_ret = self.focus_out.get()
 
-        if focus_ret is not None:
-            focus, face = focus_ret
+        face_bbox = None
+        # if focus_ret is not None:
+        #     focus, face_bbox = focus_ret
 
         # Compute distance
         d = None
@@ -93,8 +94,6 @@ class Human(Node):
         fps_s = self.fps_s[-10:]
         fps = sum(fps_s) / len(fps_s)
 
-        img = cv2.flip(img, 0)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         elements = {"img": img,
                     "pose": pose3d_root,
                     "edges": edges,
@@ -102,7 +101,8 @@ class Human(Node):
                     "focus": focus,
                     "actions": results,
                     "distance": d,  # TODO fix
-                    "box": bbox
+                    "human_bbox": human_bbox,
+                    "face_bbox": face_bbox
                     }
 
         return elements
