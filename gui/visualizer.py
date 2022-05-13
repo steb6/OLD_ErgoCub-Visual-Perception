@@ -3,12 +3,12 @@ from multiprocessing.managers import BaseManager
 
 import cv2
 from vispy import app, scene, visuals
-from vispy.scene import ViewBox, Grid
 from vispy.scene.visuals import Text, Image, Markers
 import numpy as np
 import math
 import sys
 from loguru import logger
+from scipy.spatial.transform import Rotation
 
 from grasping.modules.utils.misc import draw_mask
 
@@ -51,7 +51,6 @@ class Visualizer(Process):
     def remove_all_widgets(self):
         for wg in self.widgets:
             self.grid.remove_widget(wg)
-            Grid
 
     def add_all_widgets(self):
         cols = [0] * 4 + [3] * 4
@@ -114,7 +113,7 @@ class Visualizer(Process):
 
         # Point Cloud 1
         b3 = self.grid.add_view(row=2, col=0)
-        b3.camera = scene.TurntableCamera(distance=1)
+        b3.camera = scene.TurntableCamera(elevation=0, azimuth=0, distance=1)
         b3.border_color = (0.5, 0.5, 0.5, 1)
         self.scatter1 = Markers(parent=b3.scene)
         self.scatter2 = Markers(parent=b3.scene)
@@ -123,9 +122,10 @@ class Visualizer(Process):
 
         # Point Cloud 2
         b4 = self.grid.add_view(row=3, col=0)
-        b4.camera = scene.TurntableCamera(distance=1)
+        b4.camera = scene.TurntableCamera(elevation=0, azimuth=0, distance=0.5)
         b4.border_color = (0.5, 0.5, 0.5, 1)
-
+        self.scatter3 = Markers(parent=b4.scene)
+        axis = scene.XYZAxis(parent=b4.scene)
         b4.events.mouse_press.connect(self.highlight)
         self.widgets.append(b4)
                 ######################
@@ -234,6 +234,8 @@ class Visualizer(Process):
         ##################
         #### Grasping ####
         ##################
+        if self.grasping_in.empty():
+            return
         data = self.grasping_in.get()
 
         res1, res2 = draw_mask(data['rgb'], data['mask'])
@@ -255,12 +257,16 @@ class Visualizer(Process):
 
         self.image1.set_data(res1[::-1, ..., ::-1])
         self.image2.set_data(res2[::-1, ..., ::-1])
-        self.scatter1.set_data((data['partial'] @ R) * np.array([1, 1, -1]), edge_color='orange', face_color='orange', size=5)
-        self.scatter2.set_data((data['reconstruction'] @ R) * np.array([1, 1, -1]), edge_color='blue', face_color='blue', size=5)
+        self.scatter1.set_data((data['partial'] @ Rotation.from_euler('xyz', [270, 0, 0], degrees=True).as_matrix()) * np.array([1, -1, 1]), edge_color='orange', face_color='orange', size=5)
+        self.scatter2.set_data((data['reconstruction'] @ Rotation.from_euler('xyz', [270, 0, 0], degrees=True).as_matrix()) * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
+        self.scatter3.set_data(((data['scene'][..., :3] - data['mean']) @ Rotation.from_euler('xyz', [270, 0, 0], degrees=True).as_matrix()), edge_color=data['scene'][..., 3:], face_color=data['scene'][..., 3:])
+
 
         ##################
         ##### Human ######
         ##################
+        if self.human_in.empty():
+            return
         data = self.human_in.get()
 
         if not data:
@@ -280,10 +286,7 @@ class Visualizer(Process):
 
             # POSE
             if pose is not None:
-                theta = 90
-                R = np.matrix([[1, 0, 0],
-                               [0, math.cos(theta), -math.sin(theta)],
-                               [0, math.sin(theta), math.cos(theta)]])
+                R = Rotation.from_euler('z', 90, degrees=True).as_matrix()
                 pose = pose @ R
                 for i, edge in enumerate(edges):
                     self.lines[i].set_data((pose[[edge[0], edge[1]]]))
