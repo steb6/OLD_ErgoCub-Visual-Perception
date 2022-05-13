@@ -254,10 +254,14 @@ class Visualizer(Process):
             distance = data["distance"]
             human_bbox = data["human_bbox"]
             face_bbox = data["face_bbox"]
+            box = None  # TODO
 
             # POSE
             if pose is not None:
-                R = Rotation.from_euler('z', 90, degrees=True).as_matrix()
+                theta = 90
+                R = np.matrix([[1, 0, 0],
+                               [0, math.cos(theta), -math.sin(theta)],
+                               [0, math.sin(theta), math.cos(theta)]])
                 pose = pose @ R
                 for i, edge in enumerate(edges):
                     self.lines[i].set_data((pose[[edge[0], edge[1]]]))

@@ -65,14 +65,14 @@ class Human(Node):
         focus = False
 
         self.hpe_in.put(img)
-        # self.focus_in.put(img)
+        self.focus_in.put(img)
 
         pose3d_abs, edges, human_bbox = self.hpe_out.get()
-        # focus_ret = self.focus_out.get()
+        focus_ret = self.focus_out.get()
 
         face_bbox = None
-        # if focus_ret is not None:
-        #     focus, face_bbox = focus_ret
+        if focus_ret is not None:
+            focus, face_bbox = focus_ret
 
         # Compute distance
         d = None
