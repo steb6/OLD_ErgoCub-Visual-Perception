@@ -1,3 +1,4 @@
+import copy
 import multiprocessing
 import time
 from multiprocessing import Queue
@@ -52,7 +53,7 @@ def main():
                 rgb, depth = camera.read()
 
                 for queue in processes.values():
-                    send(queue, {'rgb': rgb, 'depth': depth})
+                    send(queue, {'rgb': copy.deepcopy(rgb), 'depth': copy.deepcopy(depth)})
 
                 fps += 1 / (time.perf_counter() - start)
                 i += 1

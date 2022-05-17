@@ -3,6 +3,7 @@ from multiprocessing.managers import BaseManager
 
 import cv2
 from vispy import app, scene, visuals
+from vispy.scene import ViewBox
 from vispy.scene.visuals import Text, Image, Markers
 import numpy as np
 import math
@@ -43,28 +44,37 @@ class Visualizer(Process):
         self.grasping_in = manager.get_queue('vis_in_grasping')
 
         self.widgets = []
+        self.builders = {}
+        self.cameras = {}
+        self.last_widget = None
 
     def run(self):
         self.build_gui()
         app.run()
 
     def remove_all_widgets(self):
-        for wg in self.widgets:
+        for wg, _ in self.widgets:
             self.grid.remove_widget(wg)
+            del wg
 
-    def add_all_widgets(self):
-        cols = [0] * 4 + [3] * 4
-        rows = list(range(4)) + list(range(4))
-        for wg, r, c in zip(self.widgets, rows, cols):
-            self.grid.add_widget(wg, row=r, col=c)
+    def add_all_widgets(self, name='', args=None):
+        for build in self.builders:
+            if build == name:
+                self.builders[build](**args)
+            else:
+                self.builders[build]()
 
     def highlight(self, event):
         if event.type == 'mouse_press' and event.button == 2:
 
-            self.remove_all_widgets()
-            self.add_all_widgets()
+            self.canvas.central_widget.children[0].parent = None
+            self.grid = self.canvas.central_widget.add_grid()
+            self.add_all_widgets(event.visual.name, {'row': 0, 'col': 1, 'row_span': 4, 'col_span': 2})
 
-            self.grid.add_widget(event.visual, row=0, col=1, row_span=4, col_span=2)
+            # if self.last_widget is None:
+            #     self.last_widget = event.visual
+            # else:
+            #     self.last_widget.camera = self.center.camera
 
             # self.center.camera = event.visual.camera
             # self.center = event.visual
@@ -83,6 +93,7 @@ class Visualizer(Process):
         # This is the top-level widget that will hold three ViewBoxes, which will
         # be automatically resized whenever the grid is resized.
         self.grid = canvas.central_widget.add_grid()
+        self.canvas = canvas
         self.input_text = '>'
 
         ######################
@@ -92,119 +103,156 @@ class Visualizer(Process):
                 ###### Grasping ######
                 ######################
         # Mask Visualization 1
-        b1 = self.grid.add_view(row=0, col=0)
-        b1.camera = scene.PanZoomCamera(rect=(0, 0, 640, 480))
-        b1.camera.interactive = False
-        b1.border_color = (0.5, 0.5, 0.5, 1)
-        self.image1 = Image()
-        b1.add(self.image1)
-        b1.events.mouse_press.connect(self.highlight)
-        self.widgets.append(b1)
+        def build_mask1(row=0, col=0, row_span=1, col_span=1):
+            b1 = ViewBox(name='mask1')
+            self.grid.add_widget(b1, row=row, col=col, row_span=row_span, col_span=col_span)
+
+            if 'mask1' not in self.cameras:
+                self.cameras['mask1'] = scene.PanZoomCamera(rect=(0, 0, 640, 480), name='mask1')
+
+            b1.camera = self.cameras['mask1']
+            b1.camera.interactive = False
+            b1.border_color = (0.5, 0.5, 0.5, 1)
+            self.image1 = Image()
+            b1.add(self.image1)
+            b1.events.mouse_press.connect(self.highlight)
+            self.widgets.append([b1, {'row': 0, 'col': 0}])
+
+        self.builders['mask1'] = build_mask1
 
         # Mask Visualization 2
-        b2 = self.grid.add_view(row=1, col=0)
-        b2.camera = scene.PanZoomCamera(rect=(0, 0, 640, 480))
-        b2.camera.interactive = False
-        b2.border_color = (0.5, 0.5, 0.5, 1)
-        self.image2 = Image()
-        b2.add(self.image2)
-        b2.events.mouse_press.connect(self.highlight)
-        self.widgets.append(b2)
+        def build_mask2(row=1, col=0, row_span=1, col_span=1):
+            b2 = ViewBox(name='mask2')
+            self.grid.add_widget(b2, row=row, col=col, row_span=row_span, col_span=col_span)
+
+            if 'mask2' not in self.cameras:
+                self.cameras['mask2'] = scene.PanZoomCamera(rect=(0, 0, 640, 480), name='mask2')
+
+            b2.camera = self.cameras['mask2']
+            b2.camera.interactive = False
+            b2.border_color = (0.5, 0.5, 0.5, 1)
+            self.image2 = Image()
+            b2.add(self.image2)
+            b2.events.mouse_press.connect(self.highlight)
+            self.widgets.append([b2, {'row': 1, 'col': 0}])
+
+        self.builders['mask2'] = build_mask2
 
         # Point Cloud 1
-        b3 = self.grid.add_view(row=2, col=0)
-        b3.camera = scene.TurntableCamera(elevation=0, azimuth=0, distance=1)
-        b3.border_color = (0.5, 0.5, 0.5, 1)
-        self.scatter1 = Markers(parent=b3.scene)
-        self.scatter2 = Markers(parent=b3.scene)
-        b3.events.mouse_press.connect(self.highlight)
-        self.widgets.append(b3)
+        def build_pc1(row=2, col=0, row_span=1, col_span=1):
+            b3 = ViewBox(name='pc1')
+            b3 = self.grid.add_widget(b3, row=row, col=col, row_span=row_span, col_span=col_span)
+
+            if 'pc1' not in self.cameras:
+                self.cameras['pc1'] = scene.TurntableCamera(elevation=0, azimuth=0, distance=1, name='pc1')
+
+            b3.camera = self.cameras['pc1']
+            b3.border_color = (0.5, 0.5, 0.5, 1)
+            self.scatter1 = Markers(parent=b3.scene)
+            self.scatter2 = Markers(parent=b3.scene)
+            b3.events.mouse_press.connect(self.highlight)
+            self.widgets.append([b3, {'row': 2, 'col': 0}])
+
+        self.builders['pc1'] = build_pc1
 
         # Point Cloud 2
-        b4 = self.grid.add_view(row=3, col=0)
-        b4.camera = scene.TurntableCamera(elevation=0, azimuth=0, distance=0.5)
-        b4.border_color = (0.5, 0.5, 0.5, 1)
-        self.scatter3 = Markers(parent=b4.scene)
-        self.scatter4 = Markers(parent=b4.scene)
-        axis = scene.XYZAxis(parent=b4.scene)
-        b4.events.mouse_press.connect(self.highlight)
-        self.widgets.append(b4)
+        def build_pc2(row=3, col=0, row_span=1, col_span=1):
+            b4 = ViewBox(name='pc2')
+            b4 = self.grid.add_widget(b4, row=row, col=col, row_span=row_span, col_span=col_span)
+
+            if 'pc2' not in self.cameras:
+                self.cameras['pc2'] = scene.TurntableCamera(elevation=0, azimuth=0, distance=0.5, name='pc2')
+
+            b4.camera = self.cameras['pc2']
+            b4.border_color = (0.5, 0.5, 0.5, 1)
+            self.scatter3 = Markers(parent=b4.scene)
+            self.scatter4 = Markers(parent=b4.scene)
+            self.r_hand = scene.XYZAxis(parent=b4.scene)
+            self.l_hand = scene.XYZAxis(parent=b4.scene)
+            axis = scene.XYZAxis(parent=b4.scene)
+            b4.events.mouse_press.connect(self.highlight)
+            self.widgets.append([b4, {'row': 3, 'col': 0}])
+            self.test = b4
+        self.builders['pc2'] = build_pc2
                 ######################
                 ####### Human ########
                 ######################
 
-        b5 = self.grid.add_view(row=0, col=3)
-        b5.border_color = (0.5, 0.5, 0.5, 1)
-        b5.camera = scene.TurntableCamera(45, elevation=30, azimuth=0, distance=2)
-        self.lines = []
-        Plot3D = scene.visuals.create_visual_node(visuals.LinePlotVisual)
-        for _ in range(30):
-            self.lines.append(Plot3D(
-                [],
-                width=3.0,
-                color="purple",
-                edge_color="w",
-                symbol="o",
-                face_color=(0.2, 0.2, 1, 0.8),
-                marker_size=1,
-            ))
-            b5.add(self.lines[_])
-        coords = scene.visuals.GridLines(parent=b5.scene)
-        b5.events.mouse_press.connect(self.highlight)
-        self.widgets.append(b5)
+        def human_1(row=0, col=3, row_span=1, col_span=1):
+            b5 = ViewBox(name='human_1')
+            self.grid.add_widget(b5, row=row, col=col, row_span=row_span, col_span=col_span)
+            b5.border_color = (0.5, 0.5, 0.5, 1)
+            b5.camera = scene.TurntableCamera(45, elevation=30, azimuth=0, distance=2)
+            self.lines = []
+            Plot3D = scene.visuals.create_visual_node(visuals.LinePlotVisual)
+            for _ in range(30):
+                self.lines.append(Plot3D(
+                    [],
+                    width=3.0,
+                    color="purple",
+                    edge_color="w",
+                    symbol="o",
+                    face_color=(0.2, 0.2, 1, 0.8),
+                    marker_size=1,
+                ))
+                b5.add(self.lines[_])
+            coords = scene.visuals.GridLines(parent=b5.scene)
+            b5.events.mouse_press.connect(self.highlight)
+            self.widgets.append([b5, {'row': 0, 'col': 3}])
+        self.builders['human_1'] = human_1
 
         # Info
-        self.b6 = self.grid.add_view(row=1, col=3)
-        self.b6.camera = scene.PanZoomCamera(rect=(0, 0, 1, 1))
-        self.b6.camera.interactive = False
-        self.b6.border_color = (0.5, 0.5, 0.5, 1)
-        self.distance = Text('', color='white', rotation=0, anchor_x="center", anchor_y="bottom",
-                             font_size=12, pos=(0.25, 0.9))
-        self.b6.add(self.distance)
-        self.focus = Text('', color='green', rotation=0, anchor_x="center", anchor_y="bottom",
-                          font_size=12, pos=(0.5, 0.9))
-        self.b6.add(self.focus)
-        self.fps = Text('', color='white', rotation=0, anchor_x="center", anchor_y="bottom",
-                        font_size=12, pos=(0.75, 0.9))
-        self.b6.add(self.fps)
-        self.actions = {}
-        self.b6.events.mouse_press.connect(self.highlight)
-        self.widgets.append(self.b6)
+        def human_2(row=1, col=3, row_span=1, col_span=1):
+            self.b6 = ViewBox(name='human_2')
+            self.grid.add_widget(self.b6, row=row, col=col, row_span=row_span, col_span=col_span)
+            self.b6.camera = scene.PanZoomCamera(rect=(0, 0, 1, 1))
+            self.b6.camera.interactive = False
+            self.b6.border_color = (0.5, 0.5, 0.5, 1)
+            self.distance = Text('', color='white', rotation=0, anchor_x="center", anchor_y="bottom",
+                                 font_size=12, pos=(0.25, 0.9))
+            self.b6.add(self.distance)
+            self.focus = Text('', color='green', rotation=0, anchor_x="center", anchor_y="bottom",
+                              font_size=12, pos=(0.5, 0.9))
+            self.b6.add(self.focus)
+            self.fps = Text('', color='white', rotation=0, anchor_x="center", anchor_y="bottom",
+                            font_size=12, pos=(0.75, 0.9))
+            self.b6.add(self.fps)
+            self.actions = {}
+            self.b6.events.mouse_press.connect(self.highlight)
+            self.widgets.append([self.b6, {'row': 1, 'col': 3}])
+        self.builders['human_2'] = human_2
 
         # Image
-        b7 = self.grid.add_view(row=2, col=3)
-        b7.camera = scene.PanZoomCamera(rect=(0, 0, 640, 480))
-        b7.camera.interactive = False
-        b7.border_color = (0.5, 0.5, 0.5, 1)
-        self.image = Image()
-        b7.add(self.image)
-        b7.events.mouse_press.connect(self.highlight)
-        self.widgets.append(b7)
+        def human_3(row=2, col=3, row_span=1, col_span=1):
+            b7 = ViewBox(name='human_3')
+            self.grid.add_widget(b7, row=row, col=col, row_span=row_span, col_span=col_span)
+            b7.camera = scene.PanZoomCamera(rect=(0, 0, 640, 480))
+            b7.camera.interactive = False
+            b7.border_color = (0.5, 0.5, 0.5, 1)
+            self.image = Image()
+            b7.add(self.image)
+            b7.events.mouse_press.connect(self.highlight)
+            self.widgets.append([b7, {'row': 2, 'col': 3}])
 
-        # Commands
-        b8 = self.grid.add_view(row=3, col=3)
-        b8.camera = scene.PanZoomCamera(rect=(0, 0, 1, 1))
-        b8.camera.interactive = False
-        b8.border_color = (0.5, 0.5, 0.5, 1)
-        self.desc_add = Text('ADD ACTION: add action_name [-focus][-box/nobox]', color='white', rotation=0,
-                             anchor_x="left",
-                             anchor_y="bottom",
-                             font_size=12, pos=(0.1, 0.9))
-        self.desc_remove = Text('REMOVE ACTION: remove action_name', color='white', rotation=0, anchor_x="left",
-                                anchor_y="bottom",
-                                font_size=12, pos=(0.1, 0.7))
-        self.input_string = Text(self.input_text, color='purple', rotation=0, anchor_x="left", anchor_y="bottom",
-                                 font_size=12, pos=(0.1, 0.5))
-        self.log = Text('', color='orange', rotation=0, anchor_x="left", anchor_y="bottom",
-                        font_size=12, pos=(0.1, 0.3))
-        b8.add(self.desc_add)
-        b8.add(self.desc_remove)
-        b8.add(self.input_string)
-        b8.add(self.log)
-        b8.events.mouse_press.connect(self.highlight)
-        self.widgets.append(b8)
+        self.builders['human_3'] = human_3
 
-        self.center = self.grid.add_view(row=0, col=1, row_span=4, col_span=2)
+        def speed(row=3, col=3, row_span=1, col_span=1):
+            self.b8 = ViewBox(name='speed')
+            self.grid.add_widget(self.b8, row=row, col=col, row_span=row_span, col_span=col_span)
+            self.b8.camera = scene.PanZoomCamera(rect=(0, 0, 1, 1))
+            self.b8.camera.interactive = False
+            self.b8.border_color = (0.5, 0.5, 0.5, 1)
+
+            self.avg_fps = Text('', color='white', rotation=0, anchor_x="center", anchor_y="bottom",
+                            font_size=12, pos=(0.5, 0.95))
+
+            self.b8.add(self.avg_fps)
+            self.b8.events.mouse_press.connect(self.highlight)
+            self.widgets.append([self.b8, {'row': 1, 'col': 3}])
+        self.builders['speed'] = speed
+
+        self.add_all_widgets()
+
         logger.debug('Gui built successfully')
 
     def printer(self, x):
@@ -227,10 +275,6 @@ class Visualizer(Process):
         if not self.show:
             return
 
-        theta = 90
-        R = np.array([[1, 0, 0],
-                       [0, math.cos(theta), -math.sin(theta)],
-                       [0, math.sin(theta), math.cos(theta)]])
 
         ##################
         #### Grasping ####
@@ -239,7 +283,10 @@ class Visualizer(Process):
             return
         data = self.grasping_in.get()
 
-        res1, res2 = draw_mask(data['rgb'], data['mask'])
+        rgb_mask = draw_mask(data['rgb'], data['mask'])
+
+        depth_image = cv2.applyColorMap(cv2.convertScaleAbs(data['depth'], alpha=0.03), cv2.COLORMAP_JET)
+        depth_mask = draw_mask(depth_image, data['mask'])
 
         font = cv2.FONT_ITALIC
         bottomLeftCornerOfText = (10, 30)
@@ -248,7 +295,7 @@ class Visualizer(Process):
         thickness = 1
         lineType = 2
 
-        cv2.putText(res2, 'Distance: {:.2f}'.format(data["distance"] / 1000),
+        cv2.putText(depth_mask, 'Distance: {:.2f}'.format(data["distance"] / 1000),
                     bottomLeftCornerOfText,
                     font,
                     fontScale,
@@ -257,13 +304,24 @@ class Visualizer(Process):
                     lineType)
 
         R = Rotation.from_euler('xyz', [-90, 0, 0], degrees=True).as_matrix()
-        self.image1.set_data(res1[::-1, ..., ::-1])
-        self.image2.set_data(res2[::-1, ..., ::-1])
+        self.image1.set_data(rgb_mask[::-1, ..., ::-1])
+        self.image2.set_data(depth_mask[::-1, ...])
         self.scatter1.set_data((data['partial'] @ R) * np.array([1, -1, 1]), edge_color='orange', face_color='orange', size=5)
         self.scatter2.set_data((data['reconstruction'] @ R) * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
+
         self.scatter3.set_data((data['scene'][..., :3]) @ R, edge_color=data['scene'][..., 3:], face_color=data['scene'][..., 3:])
-        # (data['reconstruction']) * (data['var'] * 2) + data['mean'])@R * np.array([1, -1, 1])
         self.scatter4.set_data(((data['reconstruction']) * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
+        if data['poses'] is not None:
+            p = data['poses']
+            pos = np.tile(p[0], [6, 1])
+            a = np.eye(3) @ p[1]
+            pos[1] = a[0]
+            pos[3] = a[1]
+            pos[5] = a[2]
+            self.r_hand.set_data(pos)
+
+        text = '\n'.join([f'{key}: {value:.2f} fps' for (key, value) in data['fps'].items()])
+        self.avg_fps.text = text
 
         ##################
         ##### Human ######
@@ -397,7 +455,21 @@ def human():
                     }]
         human_in.put(elements)
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     viz = Visualizer()
     viz.run()
+
+    # # Testing
+    # BaseManager.register('get_queue')
+    # manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
+    # manager.connect()
+    #
+    # queue = manager.get_queue('vis_in_grasping')
+    # while True:
+    #     data = {'rgb': np.random.randint(0, 255, [480, 640, 3], dtype=np.uint8), 'depth': np.random.rand(480, 640, 3),
+    #             'mask': np.random.randint(0, 1, [480, 640], dtype=np.uint8), 'distance': 1.5,
+    #             'mean': np.array([0, 0, 0]), 'var': np.array([1, 1, 1]), 'partial': np.random.rand(2048, 3),
+    #             'reconstruction': np.random.rand(2048, 3), 'scene': np.random.rand(2048, 6), 'poses': None, 'fps': {'test': 1}}
+    #
+    #     queue.put(data)
