@@ -28,10 +28,11 @@ class Denoising:
         self.startup()
 
     def startup(self):
-        import os
-        from pathlib import Path
-        p = (Path("/mnt/") / Path(os.getcwd()).as_posix().replace("C:", "c") / Path("grasping/denoising.bash")).as_posix()
-        cmd = ['wsl', p]
+        # import os
+        # from pathlib import Path
+        # p = (Path("/mnt/") / Path(os.getcwd()).as_posix().replace("C:", "c") / Path("grasping/denoising.bash")).as_posix()
+        # cmd = ['wsl', p]
+        cmd = ['wsl', '-d', 'Ubuntu-18.04', '.', '/home/arosasco/grasping/denoise2.sh']
         popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
         for stdout_line in iter(popen.stdout.readline, ""):
             print(stdout_line)

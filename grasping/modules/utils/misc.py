@@ -23,7 +23,7 @@ def draw_mask(rgb, mask):
         overlay[mask == 1] = np.array([0, 0, 128])
     res1 = cv2.addWeighted(rgb, 1, overlay, 0.5, 0)
 
-    res2 = copy.deepcopy(rgb)
-    res2[mask == 0] = np.array([0, 0, 0])
+    # res2 = copy.deepcopy(rgb)
+    # res2[mask == 0] = np.array([0, 0, 0])
 
-    return cv2.cvtColor(res1, cv2.COLOR_RGB2BGR), cv2.cvtColor(res2, cv2.COLOR_RGB2BGR)
+    return cv2.cvtColor(res1, cv2.COLOR_RGB2BGR) #, cv2.cvtColor(res2, cv2.COLOR_RGB2BGR)

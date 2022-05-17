@@ -1,3 +1,4 @@
+import copy
 import multiprocessing
 import time
 from multiprocessing import Queue
@@ -5,7 +6,7 @@ from queue import Empty
 from multiprocessing.managers import BaseManager, RemoteError
 from typing import Dict, Union
 import pyrealsense2 as rs
-import copy
+
 from grasping.modules.utils.timer import Timer
 from utils.input import RealSense
 import sys
@@ -50,11 +51,9 @@ def main():
             while True:
                 start = time.perf_counter()
                 rgb, depth = camera.read()
-                rgb_ = copy.deepcopy(rgb)
-                depth_ = copy.deepcopy(depth)
 
                 for queue in processes.values():
-                    send(queue, {'rgb': rgb_, 'depth': depth_})
+                    send(queue, {'rgb': copy.deepcopy(rgb), 'depth': copy.deepcopy(depth)})
 
                 fps += 1 / (time.perf_counter() - start)
                 i += 1
