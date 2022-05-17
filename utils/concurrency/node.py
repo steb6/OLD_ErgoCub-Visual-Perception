@@ -41,11 +41,11 @@ class Node(Process, ABC):
         self.blocking = blocking
 
         BaseManager.register('get_queue')
-        manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
-        manager.connect()
-        self._in_queue = manager.get_queue(self.name)
+        self.manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
+        self.manager.connect()
+        self._in_queue = self.manager.get_queue(self.name)
 
-        self._out_queue = manager.get_queue(f'vis_in_{self.name}')
+        self._out_queue = self.manager.get_queue(f'vis_in_{self.name}')
 
 
 

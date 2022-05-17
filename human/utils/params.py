@@ -20,6 +20,10 @@ class RealSenseIntrinsics(object):
         self.ppy = 237.75723266601562
         self.width = 640
         self.height = 480
+        import numpy as np
+        self.K = np.array([[self.fx, 0, self.ppx],
+                           [0, self.fy, self.ppy],
+                           [0, 0, 1]])
 
 
 class TRXConfig(object):
@@ -61,5 +65,5 @@ class FocusConfig:
         self.close_thr = -0.95  # When close, z value over this thr is considered focus
         self.dist_thr = 0.3  # when distant, roll under this thr is considered focus
         self.foc_rot_thr = 0.7  # when close, roll above this thr is considered not focus
-        self.patience = 3  # result is based on the majority of previous observations
+        self.patience = 1  # result is based on the majority of previous observations
         self.sample_params_path = "human/assets/ptgaze/data/calib/sample_params.yaml"

@@ -1,7 +1,7 @@
 import os
 import cv2
 import pyrealsense2 as rs
-
+import copy
 import numpy as np
 import open3d as o3d
 from PIL import Image
@@ -40,13 +40,17 @@ class RealSense:
         return self.profile.get_stream(rs.stream.depth).as_video_stream_profile().get_intrinsics()
 
     def read(self):
-        frames = self.pipeline.wait_for_frames()
-        aligned_frames = self.align.process(frames)
+        aligned_frames = None
+        while not aligned_frames:
+            frames = self.pipeline.wait_for_frames()
+            aligned_frames = self.align.process(frames)
 
-        # depth_frame = aligned_frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
-        # color_frame = aligned_frames.get_color_frame()
-        depth_frame = frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
-        color_frame = frames.get_color_frame()
+        color_frame = None
+        while not color_frame:
+            depth_frame = copy.deepcopy(aligned_frames).get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
+            color_frame = copy.deepcopy(aligned_frames).get_color_frame()
+            # depth_frame = frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
+            # color_frame = frames.get_color_frame()
 
         depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())

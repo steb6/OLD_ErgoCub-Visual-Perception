@@ -5,9 +5,7 @@ from human.utils.params import FocusConfig, MetrabsTRTConfig, RealSenseIntrinsic
 from utils.concurrency import Node
 import time
 import numpy as np
-import cv2
 from multiprocessing import Queue, Process
-from utils.output import VISPYVisualizer
 
 
 def run_module(module, configurations, input_queue, output_queue):
@@ -35,6 +33,8 @@ class Human(Node):
         self.input_queue = None
         self.output_proc = None
         self.output_queue = None
+        self.grasping_queue = None
+        self.box_center = None
 
     def startup(self):
         # Load modules
@@ -56,6 +56,9 @@ class Human(Node):
 
         self.fps_s = []
         self.last_poses = []
+
+        self.grasping_queue = self.manager.get_queue('grasping_out')
+        self.box_center = np.array([0, 0, 0])
 
     def loop(self, data):
         img = data['rgb']
@@ -81,29 +84,32 @@ class Human(Node):
             man_pose = np.array(pose3d_abs[0])
             d = np.sqrt(np.sum(np.square(cam_pos - man_pose)))
 
-        # Normalize
+        # Center
         pose3d_root = pose3d_abs - pose3d_abs[0, :] if pose3d_abs is not None else None
 
         # Make inference
         results = self.ar.inference(pose3d_root)
 
-        end = time.time()
-
-        # Compute fps
-        self.fps_s.append(1. / (end - start) if (end-start) != 0 else 0)
-        fps_s = self.fps_s[-10:]
-        fps = sum(fps_s) / len(fps_s)
+        # Get box center
+        self.box_center = self.grasping_queue.get() if not self.grasping_queue.empty() else self.box_center
 
         elements = {"img": img,
                     "pose": pose3d_root,
                     "edges": edges,
-                    "fps": fps,
                     "focus": focus,
                     "actions": results,
                     "distance": d,  # TODO fix
                     "human_bbox": human_bbox,
-                    "face_bbox": face_bbox
+                    "face_bbox": face_bbox,
+                    "box_center": self.box_center
                     }
+
+        # Compute fps
+        end = time.time()
+        self.fps_s.append(1. / (end - start) if (end-start) != 0 else 0)
+        fps_s = self.fps_s[-10:]
+        fps = sum(fps_s) / len(fps_s)
+        print(fps)
 
         return elements
 

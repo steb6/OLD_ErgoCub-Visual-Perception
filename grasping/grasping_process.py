@@ -1,9 +1,11 @@
 import copy
 import time
 from multiprocessing import Queue, Process
+from queue import Empty
 
 import cv2
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from grasping.modules.utils.input import RealSense
 from grasping.modules.utils.misc import draw_mask
@@ -19,6 +21,7 @@ class Grasping(Node):
     def startup(self):
         import pycuda.autoinit
         import torch
+        torch.set_num_threads(1)
         from grasping.modules.denoising.src.denoiser import Denoising
         from grasping.modules.ransac.utils.inference import Runner
         from grasping.modules.shape_reconstruction.tensorrt.utils.inference import Infer as InferPcr
@@ -47,6 +50,12 @@ class Grasping(Node):
 
         self.grasp_estimator = GraspEstimator(self.ransac)
         self.denoising = Denoising()
+
+        self.out_queue = self.manager.get_queue('grasping_out')
+
+        self.verbose = False
+        self.last_time = 0
+        self.fps_s = []
 
 
     def loop(self, data):
@@ -92,7 +101,8 @@ class Grasping(Node):
                 idx = np.random.choice(denoised_pc.shape[0], 2024, replace=False)
                 size_pc = denoised_pc[idx]
             else:
-                print('Info: Partial Point Cloud padded')
+                if self.verbose:
+                    print('Info: Partial Point Cloud padded')
                 diff = 2024 - denoised_pc.shape[0]
                 pad = np.zeros([diff, 3])
                 pad[:] = segmented_pc[0]
@@ -117,7 +127,8 @@ class Grasping(Node):
 
             with Timer(name='implicit function'):
                 res = self.decoder(fast_weights)
-                print(res.shape[0])
+                if self.verbose:
+                    print(res.shape[0])
 
             if res.shape[0] < 10_000:
                 poses = self.grasp_estimator.find_poses(res * np.array([1, 1, -1]), 0.001, 5000)
@@ -126,14 +137,16 @@ class Grasping(Node):
                     poses[0] = (poses[0] * (var * 2) + mean)
                     poses[2] = (poses[2] * (var * 2) + mean)
             else:
-                print('Warning: corrupted results. Probable cause: too much input noise')
+                if self.verbose:
+                    print('Warning: corrupted results. Probable cause: too much input noise')
                 poses = None
                 mean = 0
                 var = 1
                 res = np.array([[0, 0, 0]])
                 normalized_pc = np.array([[0, 0, 0]])
         else:
-            print('Warning: not enough input points. Skipping reconstruction')
+            if self.verbose:
+                print('Warning: not enough input points. Skipping reconstruction')
             poses = None
             mean = 0
             var = 1
@@ -144,14 +157,31 @@ class Grasping(Node):
         #         'grasp_poses': poses, 'distance': distance}
 
         # Visualization
+        if self.verbose:
+            fps = 1 / (time.perf_counter() - start)
+            print('\r')
+            for k, v in Timer.counters.items():
+                print(f'{k}: {1 / (Timer.timers[k] / v)}', end=' ')
+            print(f'tot: {fps}', end=' ')
 
-        fps = 1 / (time.perf_counter() - start)
-        print('\r')
-        for k, v in Timer.counters.items():
-            print(f'{k}: {1 / (Timer.timers[k] / v)}', end=' ')
-        print(f'tot: {fps}', end=' ')
+        if not self.out_queue.empty():
+            try:
+                self.out_queue.get(block=False)
+            except Empty:
+                pass
+
+        R = Rotation.from_euler('x', 0, degrees=True).as_matrix()
+        self.out_queue.put(np.mean((res * (var * 2) + mean * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), axis=0)[None, ...])
 
         o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
+
+        end = time.time()
+        self.fps_s.append(1. / (end - self.last_time) if (end - self.last_time) != 0 else 0)
+        self.last_time = end
+        fps_s = self.fps_s[-10:]
+        fps = sum(fps_s) / len(fps_s)
+        print(fps)
+
         return {'rgb': rgb, 'mask': mask, 'distance': distance, 'partial': normalized_pc,
                 'scene': np.concatenate([np.array(o3d_scene.points), np.array(o3d_scene.colors)], axis=1), 'reconstruction': res,
                 'mean': mean, 'var': var}

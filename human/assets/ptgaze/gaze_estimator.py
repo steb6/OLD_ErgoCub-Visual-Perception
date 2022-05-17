@@ -3,6 +3,7 @@ from typing import List
 
 import numpy as np
 import torch
+torch.set_num_threads(1)  # ADDED BY ME, IT REDUCES THE CPU USAGE
 from omegaconf import DictConfig
 
 from .common import Camera, Face, FacePartsName
