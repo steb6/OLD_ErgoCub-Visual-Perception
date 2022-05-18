@@ -105,7 +105,7 @@ class FocusDetector:
         return frame
 
     def estimate(self, frame):
-
+        frame = frame[..., ::-1]  # Focus needs BGR!
         faces = self.gaze_estimator.detect_faces(frame)
 
         if len(faces) == 0:

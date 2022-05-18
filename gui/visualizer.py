@@ -344,15 +344,15 @@ class Visualizer(Process):
 
                 # Box and human
                 box_center_2d = None
-                box = False
+                there_is_box = False
                 if box_center_3d is not None and np.any(box_center_3d):
                     box_center = box_center_3d
                     box_center_2d = RealSenseIntrinsics().K @ box_center.T
                     box_center_2d = box_center_2d[0:2] / box_center_2d[2, :]
                     box_center_2d = np.round(box_center_2d, 0).astype(int).squeeze()
                     if human_bbox is not None:
-                        box = (human_bbox[0] < box_center_2d[0] < human_bbox[1]) and \
-                              (human_bbox[2] < box_center_2d[1] < human_bbox[3])
+                        there_is_box = (human_bbox[0] < box_center_2d[0] < human_bbox[1]) and \
+                                       (human_bbox[2] < box_center_2d[1] < human_bbox[3])
 
                 # IMAGE
                 if img is not None:
@@ -364,6 +364,8 @@ class Visualizer(Process):
                         x1, y1, x2, y2 = face_bbox.bbox.reshape(-1)
                         img = cv2.rectangle(img,
                                             (x1, y1), (x2, y2), (255, 0, 0), 1).astype(np.uint8)
+                    if box_center_2d is not None:
+                        img = cv2.circle(img, box_center_2d, 5, (0, 255, 0)).astype(np.uint8)
                     img = cv2.flip(img, 0)
                     self.image.set_data(img)
 
@@ -395,7 +397,7 @@ class Visualizer(Process):
                     # Check if conditions are satisfied
                     if score > 0.5:
                         c1 = True if not requires_focus else focus
-                        c2 = True if (requires_box is None) else (box == requires_box)
+                        c2 = True if (requires_box is None) else (there_is_box == requires_box)
                         if c1 and c2:
                             color = "green"
                         else:
@@ -407,9 +409,9 @@ class Visualizer(Process):
                         if requires_focus:
                             text += ' (0_0)'
                         if requires_box:
-                            text += ' [X]'
+                            text += ' [T]'
                         if requires_box is not None and not requires_box:
-                            text += ' [ ]'
+                            text += ' [F]'
                         self.actions[r].text = text
                     else:
                         self.actions[r] = Text('', rotation=0, anchor_x="center", anchor_y="bottom", font_size=12)

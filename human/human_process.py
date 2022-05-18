@@ -32,7 +32,6 @@ class Human(Node):
         self.visualizer = None
         self.input_queue = None
         self.output_proc = None
-        self.output_queue = None
         self.grasping_queue = None
         self.box_center = None
 
@@ -91,7 +90,8 @@ class Human(Node):
         results = self.ar.inference(pose3d_root)
 
         # Get box center
-        self.box_center = self.grasping_queue.get() if not self.grasping_queue.empty() else self.box_center
+        self.box_center = self.grasping_queue.get()  # WAITING GRASPING
+        # self.box_center = self.grasping_queue.get() if not self.grasping_queue.empty() else self.box_center  # NOWAIT
 
         elements = {"img": img,
                     "pose": pose3d_root,

@@ -1,9 +1,11 @@
 import copy
 import time
 from multiprocessing import Queue, Process
+from queue import Empty
 
 import cv2
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from grasping.modules.utils.input import RealSense
 from grasping.modules.utils.misc import draw_mask
@@ -47,6 +49,8 @@ class Grasping(Node):
 
         self.grasp_estimator = GraspEstimator(self.ransac)
         self.denoising = Denoising()
+
+        self.out_queue = self.manager.get_queue('grasping_out')
 
 
     def loop(self, data):
@@ -147,6 +151,15 @@ class Grasping(Node):
         # print(f'tot: {fps}', end=' ')
 
         avg_fps = {name: 1 / Timer(name).compute() for name in Timer.timers}
+
+        if not self.out_queue.empty():
+            try:
+                self.out_queue.get(block=False)
+            except Empty:
+                pass
+        R = Rotation.from_euler('x', 0, degrees=True).as_matrix()
+        self.out_queue.put(
+            np.mean((res * (var * 2) + mean * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), axis=0)[None, ...])
 
         o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
         return {'rgb': rgb, 'depth': depth, 'mask': mask, 'distance': distance, 'partial': normalized_pc,

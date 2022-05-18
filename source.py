@@ -6,8 +6,6 @@ from queue import Empty
 from multiprocessing.managers import BaseManager, RemoteError
 from typing import Dict, Union
 import pyrealsense2 as rs
-
-from grasping.modules.utils.timer import Timer
 from utils.input import RealSense
 import sys
 from loguru import logger
@@ -38,7 +36,6 @@ def main():
 
     for proc in processes:
         processes[proc] = manager.get_queue(proc)
-
 
     camera = RealSense(color_format=rs.format.rgb8, fps=30)
     logger.info('Streaming to the connected processes...')
@@ -101,11 +98,11 @@ def register(manager, processes):
 
 
 def send(queue, data):
-    while not queue.empty():
+    if not queue.empty():
         try:
             queue.get(block=False)
         except Empty:
-            break
+            pass
     queue.put(data)
 
 
