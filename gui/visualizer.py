@@ -221,7 +221,8 @@ class Visualizer(Process):
             self.fps = Text('', color='white', rotation=0, anchor_x="center", anchor_y="bottom",
                             font_size=12, pos=(0.75, 0.9))
             self.b6.add(self.fps)
-            self.actions = {}
+            self.action = Text('', rotation=0, anchor_x="center", anchor_y="center", font_size=12)
+            self.b6.add(self.action)
             self.b6.events.mouse_press.connect(self.highlight)
             self.widgets.append([self.b6, {'row': 1, 'col': 3}])
         self.builders['human_2'] = human_2
@@ -326,7 +327,7 @@ class Visualizer(Process):
                 pose = data["pose"]
                 img = data["img"]
                 focus = data["focus"]
-                results = data["actions"]
+                actions = data["actions"]
                 distance = data["distance"]
                 human_bbox = data["human_bbox"]
                 face_bbox = data["face_bbox"]
@@ -391,42 +392,45 @@ class Visualizer(Process):
                     self.distance.text = "DIST: {:.2f}m".format(distance)
 
                 # Actions
-                # m = max([_[0] for _ in results.values()]) if len(results) > 0 else 0
-                for i, r in enumerate(results.keys()):
-                    score, requires_focus, requires_box = results[r]
-                    # Check if conditions are satisfied
-                    if score > 0.5:
-                        c1 = True if not requires_focus else focus
-                        c2 = True if (requires_box is None) else (there_is_box == requires_box)
-                        if c1 and c2:
-                            color = "green"
-                        else:
-                            color = "orange"
-                    else:
-                        color = "red"
-                    if r in self.actions.keys():
-                        text = "{}: {:.2f}".format(r, score)
-                        if requires_focus:
-                            text += ' (0_0)'
-                        if requires_box:
-                            text += ' [T]'
-                        if requires_box is not None and not requires_box:
-                            text += ' [F]'
-                        self.actions[r].text = text
-                    else:
-                        self.actions[r] = Text('', rotation=0, anchor_x="center", anchor_y="bottom", font_size=12)
-                        self.b6.add(self.actions[r])
-                    self.actions[r].pos = 0.5, 0.7 - (0.1 * i)
-                    self.actions[r].color = color
+                self.action.text = str(actions)
+                self.action.pos = 0.5, 0.5
+                self.action.color = "green"
+                # # m = max([_[0] for _ in results.values()]) if len(results) > 0 else 0
+                # for i, r in enumerate(results.keys()):
+                #     score, requires_focus, requires_box = results[r]
+                #     # Check if conditions are satisfied
+                #     if score > 0.5:
+                #         c1 = True if not requires_focus else focus
+                #         c2 = True if (requires_box is None) else (there_is_box == requires_box)
+                #         if c1 and c2:
+                #             color = "green"
+                #         else:
+                #             color = "orange"
+                #     else:
+                #         color = "red"
+                #     if r in self.actions.keys():
+                #         text = "{}: {:.2f}".format(r, score)
+                #         if requires_focus:
+                #             text += ' (0_0)'
+                #         if requires_box:
+                #             text += ' [T]'
+                #         if requires_box is not None and not requires_box:
+                #             text += ' [F]'
+                #         self.actions[r].text = text
+                #     else:
+                #         self.actions[r] = Text('', rotation=0, anchor_x="center", anchor_y="bottom", font_size=12)
+                #         self.b6.add(self.actions[r])
+                #     self.actions[r].pos = 0.5, 0.7 - (0.1 * i)
+                #     self.actions[r].color = color
 
-                # Remove erased action (if any)
-                to_remove = []
-                for key in self.actions.keys():
-                    if key not in results.keys():
-                        to_remove.append(key)
-                for key in to_remove:
-                    self.actions[key].parent = None
-                    self.actions.pop(key)
+                # # Remove erased action (if any)
+                # to_remove = []
+                # for key in self.actions.keys():
+                #     if key not in results.keys():
+                #         to_remove.append(key)
+                # for key in to_remove:
+                #     self.actions[key].parent = None
+                #     self.actions.pop(key)
 
     def on_draw(self, event):
         pass

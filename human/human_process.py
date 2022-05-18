@@ -1,5 +1,5 @@
 from human.modules.focus import FocusDetector
-from human.modules.ar import ActionRecognizer
+from human.modules.pr import PoseRecognizer
 from human.modules.hpe import HumanPoseEstimator
 from human.utils.params import FocusConfig, MetrabsTRTConfig, RealSenseIntrinsics, TRXConfig
 from utils.concurrency import Node
@@ -25,13 +25,10 @@ class Human(Node):
         self.hpe_in = None
         self.hpe_out = None
         self.hpe_proc = None
-        self.ar = None
+        self.pr = None
         self.window_size = None
         self.fps_s = None
         self.last_poses = None
-        self.visualizer = None
-        self.input_queue = None
-        self.output_proc = None
         self.grasping_queue = None
         self.box_center = None
 
@@ -51,7 +48,7 @@ class Human(Node):
                                                          self.hpe_in, self.hpe_out))
         self.hpe_proc.start()
 
-        self.ar = ActionRecognizer(TRXConfig())
+        self.pr = PoseRecognizer(TRXConfig())
 
         self.fps_s = []
         self.last_poses = []
@@ -64,14 +61,13 @@ class Human(Node):
         start = time.time()
 
         # Start independent modules
-        focus = False
-
         self.hpe_in.put(img)
         self.focus_in.put(img)
-
         pose3d_abs, edges, human_bbox = self.hpe_out.get()
         focus_ret = self.focus_out.get()
 
+        # Focus
+        focus = False
         face_bbox = None
         if focus_ret is not None:
             focus, face_bbox = focus_ret
@@ -86,30 +82,55 @@ class Human(Node):
         # Center
         pose3d_root = pose3d_abs - pose3d_abs[0, :] if pose3d_abs is not None else None
 
-        # Make inference
-        results = self.ar.inference(pose3d_root)
+        # Get pose
+        poses = self.pr.inference(pose3d_root)
+        pose = None
+        if len(poses) > 0:
+            pose = list(poses.keys())[list(poses.values()).index(max(poses.values()))]
+
+        # Get box position  # TODO CHANGE BOX-HUMAN CHECK
+        box_position = self.grasping_queue.get()
+        # box_position = np.array([1, 1, 1])
+        box_distance = -1
+        if np.any(box_position):
+            box_distance = np.linalg.norm(np.array([0, 0, 0]) - box_position)
+
+        # Select manually correct action
+        actions = []
+        poi = None
+        if pose is not None:
+            if pose == "stand":
+                actions.append(f"stand: {poses[pose]}")
+            if pose == "safe":
+                actions.append(f"safe: {poses[pose]}")
+            if pose == "unsafe":
+                actions.append(f"unsafe: {poses[pose]}")
+            if pose == "hello" and focus:
+                actions.append(f"hello: {poses[pose]}")
+            if pose == "wait" and focus and box_distance == -1:
+                actions.append(f"give: {poses[pose]}")
+        if box_distance != -1 and box_distance < 0.7:  # Less than 70 cm
+            actions.append("get")
+        print(actions)
 
         # Get box center
-        self.box_center = self.grasping_queue.get()  # WAITING GRASPING
-        # self.box_center = self.grasping_queue.get() if not self.grasping_queue.empty() else self.box_center  # NOWAIT
-
         elements = {"img": img,
                     "pose": pose3d_root,
                     "edges": edges,
                     "focus": focus,
-                    "actions": results,
+                    "actions": actions,
                     "distance": d,  # TODO fix
                     "human_bbox": human_bbox,
                     "face_bbox": face_bbox,
-                    "box_center": self.box_center
+                    "box_center": box_position
                     }
 
-        # Compute fps
-        end = time.time()
-        self.fps_s.append(1. / (end - start) if (end-start) != 0 else 0)
-        fps_s = self.fps_s[-10:]
-        fps = sum(fps_s) / len(fps_s)
-        print(fps)
+        # # Compute fps
+        # end = time.time()
+        # self.fps_s.append(1. / (end - start) if (end-start) != 0 else 0)
+        # fps_s = self.fps_s[-10:]
+        # fps = sum(fps_s) / len(fps_s)
+        # print(fps)
 
         return elements
 

@@ -123,7 +123,7 @@ class HumanPoseEstimator:
         is_predicted_to_be_in_fov = is_within_fov(pred2d)
 
         # If less than 1/4 of the joints is visible, then the resulting pose will be weird
-        if is_predicted_to_be_in_fov.sum() < is_predicted_to_be_in_fov.size / 8:
+        if is_predicted_to_be_in_fov.sum() < is_predicted_to_be_in_fov.size / 4:
             return None, None, None
 
         # Go back in original space (without augmentation and homography)
