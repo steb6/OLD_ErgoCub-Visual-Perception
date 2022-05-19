@@ -345,15 +345,11 @@ class Visualizer(Process):
 
                 # Box and human
                 box_center_2d = None
-                there_is_box = False
                 if box_center_3d is not None and np.any(box_center_3d):
                     box_center = box_center_3d
                     box_center_2d = RealSenseIntrinsics().K @ box_center.T
                     box_center_2d = box_center_2d[0:2] / box_center_2d[2, :]
                     box_center_2d = np.round(box_center_2d, 0).astype(int).squeeze()
-                    if human_bbox is not None:
-                        there_is_box = (human_bbox[0] < box_center_2d[0] < human_bbox[1]) and \
-                                       (human_bbox[2] < box_center_2d[1] < human_bbox[3])
 
                 # IMAGE
                 if img is not None:
@@ -422,15 +418,6 @@ class Visualizer(Process):
                 #         self.b6.add(self.actions[r])
                 #     self.actions[r].pos = 0.5, 0.7 - (0.1 * i)
                 #     self.actions[r].color = color
-
-                # # Remove erased action (if any)
-                # to_remove = []
-                # for key in self.actions.keys():
-                #     if key not in results.keys():
-                #         to_remove.append(key)
-                # for key in to_remove:
-                #     self.actions[key].parent = None
-                #     self.actions.pop(key)
 
     def on_draw(self, event):
         pass

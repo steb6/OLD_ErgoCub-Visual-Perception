@@ -161,11 +161,12 @@ class Grasping(Node):
         self.out_queue.put(
             np.mean((res * (var * 2) + mean * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), axis=0)[None, ...])
 
-        o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
-        return {'rgb': rgb, 'depth': depth, 'mask': mask, 'distance': distance, 'partial': normalized_pc,
-                'scene': np.concatenate([np.array(o3d_scene.points), np.array(o3d_scene.colors)], axis=1),
-                'reconstruction': res, 'poses': poses,
-                'mean': mean, 'var': var, 'fps': avg_fps}
+        return {}
+        # o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
+        # return {'rgb': rgb, 'depth': depth, 'mask': mask, 'distance': distance, 'partial': normalized_pc,
+        #         'scene': np.concatenate([np.array(o3d_scene.points), np.array(o3d_scene.colors)], axis=1),
+        #         'reconstruction': res, 'poses': poses,
+        #         'mean': mean, 'var': var, 'fps': avg_fps}
 
     def shutdown(self):
         pass

@@ -31,6 +31,7 @@ class Human(Node):
         self.last_poses = None
         self.grasping_queue = None
         self.box_center = None
+        self.last_box_position = None
 
     def startup(self):
         # Load modules
@@ -54,7 +55,7 @@ class Human(Node):
         self.last_poses = []
 
         self.grasping_queue = self.manager.get_queue('grasping_out')
-        self.box_center = np.array([0, 0, 0])
+        self.last_box_position = np.array([0, 0, 0])
 
     def loop(self, data):
         img = data['rgb']
@@ -79,18 +80,19 @@ class Human(Node):
             man_pose = np.array(pose3d_abs[0])
             d = np.sqrt(np.sum(np.square(cam_pos - man_pose)))
 
-        # Center
-        pose3d_root = pose3d_abs - pose3d_abs[0, :] if pose3d_abs is not None else None
-
         # Get pose
+        pose3d_root = pose3d_abs - pose3d_abs[0, :] if pose3d_abs is not None else None
         poses = self.pr.inference(pose3d_root)
         pose = None
         if len(poses) > 0:
             pose = list(poses.keys())[list(poses.values()).index(max(poses.values()))]
 
-        # Get box position  # TODO CHANGE BOX-HUMAN CHECK
+        # Get box position
+        # Wait
         box_position = self.grasping_queue.get()
-        # box_position = np.array([1, 1, 1])
+        # No Wait
+        # box_position = self.grasping_queue.get() if not self.grasping_queue.empty() else self.last_box_position
+        self.last_box_position = box_position
         box_distance = -1
         if np.any(box_position):
             box_distance = np.linalg.norm(np.array([0, 0, 0]) - box_position)
@@ -100,17 +102,17 @@ class Human(Node):
         poi = None
         if pose is not None:
             if pose == "stand":
-                actions.append(f"stand: {poses[pose]}")
+                actions.append("stand: {:.2f}".format(poses[pose]))
             if pose == "safe":
-                actions.append(f"safe: {poses[pose]}")
+                actions.append("safe (conf: {:.2f}".format(poses[pose]))
             if pose == "unsafe":
-                actions.append(f"unsafe: {poses[pose]}")
+                actions.append("unsafe (conf: {:.2f}".format(poses[pose]))
             if pose == "hello" and focus:
-                actions.append(f"hello: {poses[pose]}")
+                actions.append("hello (conf: {:.2f}".format(poses[pose]))
             if pose == "wait" and focus and box_distance == -1:
-                actions.append(f"give: {poses[pose]}")
+                actions.append("give (conf: {:.2f}".format(poses[pose]))
         if box_distance != -1 and box_distance < 0.7:  # Less than 70 cm
-            actions.append("get")
+            actions.append("get (dist: {:.2f}".format(box_distance))
         print(actions)
 
         # Get box center
@@ -126,11 +128,11 @@ class Human(Node):
                     }
 
         # # Compute fps
-        # end = time.time()
-        # self.fps_s.append(1. / (end - start) if (end-start) != 0 else 0)
-        # fps_s = self.fps_s[-10:]
-        # fps = sum(fps_s) / len(fps_s)
-        # print(fps)
+        end = time.time()
+        self.fps_s.append(1. / (end - start) if (end-start) != 0 else 0)
+        fps_s = self.fps_s[-10:]
+        fps = sum(fps_s) / len(fps_s)
+        print(fps)
 
         return elements
 
