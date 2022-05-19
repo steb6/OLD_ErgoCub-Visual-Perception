@@ -268,7 +268,7 @@ class Visualizer(Process):
         ##################
         #### Grasping ####
         ##################
-        if not self.grasping_in.empty():
+        if not self.grasping_in.empty() and False:
             data = self.grasping_in.get()
 
             rgb_mask = draw_mask(data['rgb'], data['mask'])
@@ -327,7 +327,7 @@ class Visualizer(Process):
                 pose = data["pose"]
                 img = data["img"]
                 focus = data["focus"]
-                actions = data["actions"]
+                action = data["action"]
                 distance = data["distance"]
                 human_bbox = data["human_bbox"]
                 face_bbox = data["face_bbox"]
@@ -388,7 +388,7 @@ class Visualizer(Process):
                     self.distance.text = "DIST: {:.2f}m".format(distance)
 
                 # Actions
-                self.action.text = str(actions)
+                self.action.text = str(action)
                 self.action.pos = 0.5, 0.5
                 self.action.color = "green"
                 # # m = max([_[0] for _ in results.values()]) if len(results) > 0 else 0
@@ -454,7 +454,7 @@ if __name__ == '__main__':
                          "edges": [(1, 2)],
                          "fps": 0,
                          "focus": False,
-                         "actions": {},
+                         "action": {},
                          "distance": 0,  # TODO fix
                          "box": [1, 2, 3, 4]
                          }]

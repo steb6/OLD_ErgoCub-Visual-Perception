@@ -98,29 +98,29 @@ class Human(Node):
             box_distance = np.linalg.norm(np.array([0, 0, 0]) - box_position)
 
         # Select manually correct action
-        actions = []
-        poi = None
+        action = None
         if pose is not None:
-            if pose == "stand":
-                actions.append("stand: {:.2f}".format(poses[pose]))
-            if pose == "safe":
-                actions.append("safe (conf: {:.2f}".format(poses[pose]))
-            if pose == "unsafe":
-                actions.append("unsafe (conf: {:.2f}".format(poses[pose]))
-            if pose == "hello" and focus:
-                actions.append("hello (conf: {:.2f}".format(poses[pose]))
-            if pose == "wait" and focus and box_distance == -1:
-                actions.append("give (conf: {:.2f}".format(poses[pose]))
+            if poses[pose] > 0.7:  # Filter uncertainty
+                if pose == "stand":
+                    action = "stand: {:.2f}".format(poses[pose])
+                if pose == "safe" and box_distance != -1:
+                    action = "safe: {:.2f}".format(poses[pose])
+                if pose == "unsafe" and box_distance != -1:
+                    action = "unsafe: {:.2f}".format(poses[pose])
+                if pose == "hello" and focus:
+                    action = "hello: {:.2f}".format(poses[pose])
+                if pose == "wait" and focus and box_distance == -1:
+                    action = "give: {:.2f}".format(poses[pose])
         if box_distance != -1 and box_distance < 0.7:  # Less than 70 cm
-            actions.append("get (dist: {:.2f}".format(box_distance))
-        print(actions)
+            action = "get (dist: {:.2f}".format(box_distance)
+        print(action)
 
         # Get box center
         elements = {"img": img,
                     "pose": pose3d_root,
                     "edges": edges,
                     "focus": focus,
-                    "actions": actions,
+                    "action": action,
                     "distance": d,  # TODO fix
                     "human_bbox": human_bbox,
                     "face_bbox": face_bbox,

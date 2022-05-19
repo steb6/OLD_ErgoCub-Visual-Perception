@@ -97,8 +97,7 @@ class FocusDetector:
                                                                                     score_rot, self.foc_rot_thr),
                                 (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
         else:
-            # head_pose = face.head_pose_rot.as_rotvec()  # TODO BEFORE
-            head_pose = np.linalg.inv(face.normalizing_rot.as_matrix()) @ face.head_pose_rot.as_rotvec()  # TODO TRY
+            head_pose = face.normalized_head_rot2d
             score = abs(head_pose[1])
             frame = cv2.putText(frame, "{:.2f} < {:.2f}".format(score, self.dist_thr), (10, 120),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
@@ -131,7 +130,7 @@ class FocusDetector:
             # HUMAN IS NOT CLOSE, USE HEAD POSE
             else:
                 self.is_close = False
-                head_pose = face.head_pose_rot.as_rotvec()
+                head_pose = face.normalized_head_rot2d
                 score = abs(head_pose[1])
                 focus = score < self.dist_thr
 
