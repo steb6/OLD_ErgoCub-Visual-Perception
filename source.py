@@ -30,7 +30,7 @@ logger.level('ERROR', color='<fg #ed254e>')
 def main():
     set_name('Source')
 
-    processes: Dict[str, Union[Queue, None]] = {'grasping': None, 'human': None}
+    processes: Dict[str, Union[Queue, None]] = {'grasping': None, 'human': None, 'speed': None}
 
     BaseManager.register('get_queue')
     manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
@@ -40,11 +40,12 @@ def main():
         processes[proc] = manager.get_queue(proc)
 
 
-    camera = RealSense(color_format=rs.format.rgb8, fps=30)
+    camera = RealSense(color_format=rs.format.rgb8, fps=60)
     logger.info('Streaming to the connected processes...')
 
-    fps = 0
-    i = 0
+    fps1 = 0
+    fps2 = 0
+    i = 1
     while True:
         try:
 
@@ -52,19 +53,22 @@ def main():
                 start = time.perf_counter()
                 rgb, depth = camera.read()
 
+                # fps1 += 1 / (time.perf_counter() - start)
+                # print('read: ', fps1 / i)
+
                 for queue in processes.values():
                     send(queue, {'rgb': copy.deepcopy(rgb), 'depth': copy.deepcopy(depth)})
 
-                fps += 1 / (time.perf_counter() - start)
+                fps2 += 1 / (time.perf_counter() - start)
+                print('read + send', fps2/i)
                 i += 1
-                print('\r', fps/i, end='')
         except RuntimeError:
             logger.error("Realsense: frame didn't arrive")
             # ctx = rs.context()
             # devices = ctx.query_devices()
             # for dev in devices:
             #     dev.hardware_reset()
-            camera = RealSense(color_format=rs.format.rgb8, fps=30)
+            camera = RealSense(color_format=rs.format.rgb8, fps=60)
 
 
 def set_name(name):

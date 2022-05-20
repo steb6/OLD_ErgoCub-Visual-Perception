@@ -154,6 +154,10 @@ class Visualizer(Process):
             b3.border_color = (0.5, 0.5, 0.5, 1)
             self.scatter1 = Markers(parent=b3.scene)
             self.scatter2 = Markers(parent=b3.scene)
+
+            # self.r_hand = scene.XYZAxis(parent=b3.scene, width=10)
+            # axis = scene.XYZAxis(parent=b3.scene, width=10)
+
             b3.events.mouse_press.connect(self.highlight)
             self.widgets.append([b3, {'row': 2, 'col': 0}])
 
@@ -171,9 +175,9 @@ class Visualizer(Process):
             b4.border_color = (0.5, 0.5, 0.5, 1)
             self.scatter3 = Markers(parent=b4.scene)
             self.scatter4 = Markers(parent=b4.scene)
-            self.r_hand = scene.XYZAxis(parent=b4.scene)
+            self.r_hand = scene.XYZAxis(parent=b4.scene, width=10)
             self.l_hand = scene.XYZAxis(parent=b4.scene)
-            axis = scene.XYZAxis(parent=b4.scene)
+            axis = scene.XYZAxis(parent=b4.scene, width=10)
             b4.events.mouse_press.connect(self.highlight)
             self.widgets.append([b4, {'row': 3, 'col': 0}])
             self.test = b4
@@ -264,6 +268,7 @@ class Visualizer(Process):
         if not self.show:
             return
 
+        start = time.perf_counter()
         ##################
         #### Grasping ####
         ##################
@@ -299,17 +304,31 @@ class Visualizer(Process):
             self.scatter3.set_data((data['scene'][..., :3]) @ R, edge_color=data['scene'][..., 3:], face_color=data['scene'][..., 3:])
             self.scatter4.set_data(((data['reconstruction']) * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
             if data['poses'] is not None:
-                p = data['poses']
-                pos = np.tile(p[0], [6, 1])
-                a = np.eye(3) @ p[1]
-                pos[1] = a[0]
-                pos[3] = a[1]
-                pos[5] = a[2]
+                poses = data['poses']
+                center_right = ((poses[0] * np.array([1, 1, -1])) * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array([1, -1, 1])
+                poses[2] = (poses[2] * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array([1, -1, 1])
+
+                pos = np.array([[0, 0, 0],
+                                [1, 0, 0],
+                                [0, 0, 0],
+                                [0, 1, 0],
+                                [0, 0, 0],
+                                [0, 0, 1]]) * 0.1
+                pos = pos @ poses[1] @ R * np.array([1, -1, 1])
+                pos = pos + center_right
+
+                # pos = np.tile(poses[0], [6, 1])
+                # a = np.eye(3) @ poses[1]
+                # pos[1] = a[0]
+                # pos[3] = a[1]
+                # pos[5] = a[2]
                 self.r_hand.set_data(pos)
 
-            text = '\n'.join([f'{key}: {value:.2f} fps' for (key, value) in data['fps'].items()])
-            self.avg_fps.text = text
+            # text = '\n'.join([f'{key}: {value:.2f} fps' for (key, value) in data['fps'].items()])
+            # self.avg_fps.text = text
 
+
+        print(1 / (time.perf_counter() - start))
         ##################
         ##### Human ######
         ##################
