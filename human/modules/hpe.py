@@ -1,7 +1,7 @@
 import copy
 import pickle
 import time
-from human.utils.misc import postprocess_yolo_output, homography, is_within_fov
+from human.utils.misc import postprocess_yolo_output, homography, is_within_fov, reconstruct_absolute
 import einops
 import numpy as np
 from utils.runner import Runner
@@ -126,6 +126,10 @@ class HumanPoseEstimator:
         # If less than 1/4 of the joints is visible, then the resulting pose will be weird
         if is_predicted_to_be_in_fov.sum() < is_predicted_to_be_in_fov.size / 4:
             return None, None, None
+
+        # Move the skeleton into estimated absolute position if necessary  # TODO fIX
+        pred3d = reconstruct_absolute(pred2d, pred3d, new_K[None, ...], is_predicted_to_be_in_fov,
+                                      weak_perspective=False)
 
         # Go back in original space (without augmentation and homography)
         pred3d = pred3d @ homo_inv

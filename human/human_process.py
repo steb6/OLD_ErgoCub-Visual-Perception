@@ -76,9 +76,7 @@ class Human(Node):
         # Compute distance
         d = None
         if pose3d_abs is not None:
-            cam_pos = np.array([0, 0, 0])
-            man_pose = np.array(pose3d_abs[0])
-            d = np.sqrt(np.sum(np.square(cam_pos - man_pose)))
+            d = np.linalg.norm(pose3d_abs[0] * 2.2)  # Metrabs denormalization
 
         # Get pose
         pose3d_root = pose3d_abs - pose3d_abs[0, :] if pose3d_abs is not None else None

@@ -1,4 +1,5 @@
 import numpy as np
+import einops
 
 
 def nms_cpu(boxes, confs, nms_thresh=0.7, min_mode=False):
@@ -158,3 +159,68 @@ def homography(x1, x2, y1, y2, K, out_dim):
             np.ones((1, 1), np.float32)], axis=1)], axis=0)
 
     return new_intrinsic_matrix, R_noaug
+
+
+def reconstruct_ref_fullpersp(normalized_2d, coords3d_rel, validity_mask):
+    """Reconstructs the reference point location.
+
+    Args:
+      normalized_2d: normalized image coordinates of the joints
+         (without intrinsics applied), shape [batch_size, n_points, 2]
+      coords3d_rel: 3D camera coordinate offsets relative to the unknown reference
+         point which we want to reconstruct, shape [batch_size, n_points, 3]
+      validity_mask: boolean mask of shape [batch_size, n_points] containing True
+         where the point is reliable and should be used in the reconstruction
+
+    Returns:
+      The 3D reference point in camera coordinates, shape [batch_size, 3]
+    """
+
+    def rms_normalize(x):  # It makes the norm of the vector equal to one
+        scale = np.sqrt(np.mean(np.square(x), axis=1))
+        normalized = (x[..., 0] / scale)[..., None]
+        return scale, normalized
+
+    n_batch = np.shape(normalized_2d)[0]
+    n_points = normalized_2d.shape[1]
+    eyes = np.tile(np.expand_dims(np.eye(2, 2), 0), [n_batch, n_points, 1])
+    scale2d, reshaped2d = rms_normalize(np.reshape(normalized_2d, [-1, n_points * 2, 1]))
+    A = np.concatenate([eyes, -reshaped2d], axis=2)
+    # A: 1, 0, x1; 0, 1, y1; 1, 0, x2; 0, 1, y2; ... its the A matrix of linear system
+    rel_backproj = normalized_2d * coords3d_rel[:, :, 2:] - coords3d_rel[:, :, :2]
+    scale_rel_backproj, b = rms_normalize(np.reshape(rel_backproj, [-1, n_points * 2, 1]))
+
+    weights = validity_mask.astype(np.float32) + np.float32(1e-4)
+    weights = einops.repeat(weights, 'b j -> b (j c) 1', c=2)
+
+    i = 0  # TODO we just select one element!
+    ref = np.linalg.lstsq((A * weights)[i], (b * weights)[i], rcond=None)[0].T
+    ref = np.concatenate([ref[:, :2], ref[:, 2:] / scale2d[i]], axis=1) * scale_rel_backproj[i]
+    return ref
+
+
+def reconstruct_absolute(coords2d, coords3d_rel, intrinsics, is_predicted_to_be_in_fov, weak_perspective=False):
+    # coords2d = tf.convert_to_tensor(coords2d)
+    inv_intrinsics = np.linalg.inv(intrinsics.astype(np.float32))
+    coords2d_normalized = (to_homogeneous(coords2d) @ inv_intrinsics.swapaxes(1, 2))[..., :2]
+    # coords2d_normalized = np.matmul(
+    #     to_homogeneous(coords2d), inv_intrinsics, transpose_b=True)[..., :2]
+    reconstruct_ref_fn = reconstruct_ref_fullpersp
+    # is_predicted_to_be_in_fov = is_within_fov(coords2d)
+
+    ref = reconstruct_ref_fn(coords2d_normalized, coords3d_rel, is_predicted_to_be_in_fov)
+
+    # Joints that wasn't in FOV
+    coords_abs_3d_based = coords3d_rel + np.expand_dims(ref, 1)
+
+    # Joints that was in FOV
+    reference_depth = ref[:, 2]
+    relative_depths = coords3d_rel[..., 2]
+    coords_abs_2d_based = back_project(coords2d_normalized, relative_depths, reference_depth)
+
+    return np.where(
+        is_predicted_to_be_in_fov[..., np.newaxis], coords_abs_2d_based, coords_abs_3d_based)
+
+
+def back_project(camcoords2d, delta_z, z_offset):
+    return to_homogeneous(camcoords2d) * np.expand_dims(delta_z + np.expand_dims(z_offset, -1), -1)
