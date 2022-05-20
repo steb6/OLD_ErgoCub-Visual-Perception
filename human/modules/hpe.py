@@ -1,6 +1,5 @@
 import copy
 import pickle
-import time
 from human.utils.misc import postprocess_yolo_output, homography, is_within_fov, reconstruct_absolute
 import einops
 import numpy as np
@@ -127,7 +126,7 @@ class HumanPoseEstimator:
         if is_predicted_to_be_in_fov.sum() < is_predicted_to_be_in_fov.size / 4:
             return None, None, None
 
-        # Move the skeleton into estimated absolute position if necessary  # TODO fIX
+        # Move the skeleton into estimated absolute position if necessary
         pred3d = reconstruct_absolute(pred2d, pred3d, new_K[None, ...], is_predicted_to_be_in_fov,
                                       weak_perspective=False)
 

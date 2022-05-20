@@ -6,6 +6,7 @@ from utils.concurrency import Node
 import time
 import numpy as np
 from multiprocessing import Queue, Process
+import cv2
 
 
 def run_module(module, configurations, input_queue, output_queue):
@@ -85,12 +86,22 @@ class Human(Node):
         if len(poses) > 0:
             pose = list(poses.keys())[list(poses.values()).index(max(poses.values()))]
 
+        # Get 2d skeleton
+        points2d = None
+        if pose3d_abs is not None:
+            points2d, _ = cv2.projectPoints(pose3d_abs * 2.2, np.array([0, 0, 0], dtype=np.float32)[None, ...],
+                                            np.array([0, 0, 0], dtype=np.float32)[None, ...],
+                                            RealSenseIntrinsics().K,
+                                            np.array([[0.], [0.], [0.], [0.], [0.]]))
+            points2d = points2d.astype(int)
+            points2d = points2d[:, 0, :]
+
         # Get box position
         # Wait
         box_position = self.grasping_queue.get()
         # No Wait
         # box_position = self.grasping_queue.get() if not self.grasping_queue.empty() else self.last_box_position
-        self.last_box_position = box_position
+        # self.last_box_position = box_position
         box_distance = -1
         if np.any(box_position):
             box_distance = np.linalg.norm(np.array([0, 0, 0]) - box_position)
@@ -111,7 +122,6 @@ class Human(Node):
                     action = "give: {:.2f}".format(poses[pose])
         if box_distance != -1 and box_distance < 0.7:  # Less than 70 cm
             action = "get (dist: {:.2f}".format(box_distance)
-        print(action)
 
         # Get box center
         elements = {"img": img,
@@ -119,15 +129,16 @@ class Human(Node):
                     "edges": edges,
                     "focus": focus,
                     "action": action,
-                    "distance": d,  # TODO fix
+                    "distance": d,
                     "human_bbox": human_bbox,
                     "face_bbox": face_bbox,
-                    "box_center": box_position
+                    "box_center": box_position,
+                    "points2d": points2d
                     }
 
         # # Compute fps
         end = time.time()
-        self.fps_s.append(1. / (end - start) if (end-start) != 0 else 0)
+        self.fps_s.append(1. / (end - start) if (end - start) != 0 else 0)
         fps_s = self.fps_s[-10:]
         fps = sum(fps_s) / len(fps_s)
         print(fps)

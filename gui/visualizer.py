@@ -332,6 +332,7 @@ class Visualizer(Process):
                 human_bbox = data["human_bbox"]
                 face_bbox = data["face_bbox"]
                 box_center_3d = data["box_center"]
+                points2d = data["points2d"]
 
                 # POSE
                 if pose is not None:
@@ -363,6 +364,12 @@ class Visualizer(Process):
                                             (x1, y1), (x2, y2), (255, 0, 0), 1).astype(np.uint8)
                     if box_center_2d is not None:
                         img = cv2.circle(img, box_center_2d, 5, (0, 255, 0)).astype(np.uint8)
+                    if points2d is not None:
+                        for edge in edges:
+                            c1 = 0 < points2d[edge[0]][0] < 640 and 0 < points2d[edge[0]][1] < 480
+                            c2 = 0 < points2d[edge[1]][0] < 640 and 0 < points2d[edge[1]][1] < 480
+                            if c1 and c2:
+                                img = cv2.line(img, points2d[edge[0]], points2d[edge[1]], (255, 0, 255), 3, cv2.LINE_AA)
                     img = cv2.flip(img, 0)
                     self.image.set_data(img)
 
