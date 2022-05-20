@@ -225,7 +225,8 @@ class Visualizer(Process):
             self.fps = Text('', color='white', rotation=0, anchor_x="center", anchor_y="bottom",
                             font_size=12, pos=(0.75, 0.9))
             self.b6.add(self.fps)
-            self.actions = {}
+            self.action = Text('', rotation=0, anchor_x="center", anchor_y="center", font_size=12)
+            self.b6.add(self.action)
             self.b6.events.mouse_press.connect(self.highlight)
             self.widgets.append([self.b6, {'row': 1, 'col': 3}])
         self.builders['human_2'] = human_2
@@ -272,7 +273,7 @@ class Visualizer(Process):
         ##################
         #### Grasping ####
         ##################
-        if not self.grasping_in.empty():
+        if not self.grasping_in.empty() and False:
             data = self.grasping_in.get()
 
             rgb_mask = draw_mask(data['rgb'], data['mask'])
@@ -345,11 +346,12 @@ class Visualizer(Process):
                 pose = data["pose"]
                 img = data["img"]
                 focus = data["focus"]
-                results = data["actions"]
+                action = data["action"]
                 distance = data["distance"]
                 human_bbox = data["human_bbox"]
                 face_bbox = data["face_bbox"]
                 box_center_3d = data["box_center"]
+                points2d = data["points2d"]
 
                 # POSE
                 if pose is not None:
@@ -363,15 +365,11 @@ class Visualizer(Process):
 
                 # Box and human
                 box_center_2d = None
-                box = False
                 if box_center_3d is not None and np.any(box_center_3d):
                     box_center = box_center_3d
                     box_center_2d = RealSenseIntrinsics().K @ box_center.T
                     box_center_2d = box_center_2d[0:2] / box_center_2d[2, :]
                     box_center_2d = np.round(box_center_2d, 0).astype(int).squeeze()
-                    if human_bbox is not None:
-                        box = (human_bbox[0] < box_center_2d[0] < human_bbox[1]) and \
-                              (human_bbox[2] < box_center_2d[1] < human_bbox[3])
 
                 # IMAGE
                 if img is not None:
@@ -383,6 +381,14 @@ class Visualizer(Process):
                         x1, y1, x2, y2 = face_bbox.bbox.reshape(-1)
                         img = cv2.rectangle(img,
                                             (x1, y1), (x2, y2), (255, 0, 0), 1).astype(np.uint8)
+                    if box_center_2d is not None:
+                        img = cv2.circle(img, box_center_2d, 5, (0, 255, 0)).astype(np.uint8)
+                    if points2d is not None:
+                        for edge in edges:
+                            c1 = 0 < points2d[edge[0]][0] < 640 and 0 < points2d[edge[0]][1] < 480
+                            c2 = 0 < points2d[edge[1]][0] < 640 and 0 < points2d[edge[1]][1] < 480
+                            if c1 and c2:
+                                img = cv2.line(img, points2d[edge[0]], points2d[edge[1]], (255, 0, 255), 3, cv2.LINE_AA)
                     img = cv2.flip(img, 0)
                     self.image.set_data(img)
 
@@ -408,42 +414,36 @@ class Visualizer(Process):
                     self.distance.text = "DIST: {:.2f}m".format(distance)
 
                 # Actions
-                # m = max([_[0] for _ in results.values()]) if len(results) > 0 else 0
-                for i, r in enumerate(results.keys()):
-                    score, requires_focus, requires_box = results[r]
-                    # Check if conditions are satisfied
-                    if score > 0.5:
-                        c1 = True if not requires_focus else focus
-                        c2 = True if (requires_box is None) else (box == requires_box)
-                        if c1 and c2:
-                            color = "green"
-                        else:
-                            color = "orange"
-                    else:
-                        color = "red"
-                    if r in self.actions.keys():
-                        text = "{}: {:.2f}".format(r, score)
-                        if requires_focus:
-                            text += ' (0_0)'
-                        if requires_box:
-                            text += ' [X]'
-                        if requires_box is not None and not requires_box:
-                            text += ' [ ]'
-                        self.actions[r].text = text
-                    else:
-                        self.actions[r] = Text('', rotation=0, anchor_x="center", anchor_y="bottom", font_size=12)
-                        self.b6.add(self.actions[r])
-                    self.actions[r].pos = 0.5, 0.7 - (0.1 * i)
-                    self.actions[r].color = color
-
-                # Remove erased action (if any)
-                to_remove = []
-                for key in self.actions.keys():
-                    if key not in results.keys():
-                        to_remove.append(key)
-                for key in to_remove:
-                    self.actions[key].parent = None
-                    self.actions.pop(key)
+                self.action.text = str(action)
+                self.action.pos = 0.5, 0.5
+                self.action.color = "green"
+                # # m = max([_[0] for _ in results.values()]) if len(results) > 0 else 0
+                # for i, r in enumerate(results.keys()):
+                #     score, requires_focus, requires_box = results[r]
+                #     # Check if conditions are satisfied
+                #     if score > 0.5:
+                #         c1 = True if not requires_focus else focus
+                #         c2 = True if (requires_box is None) else (there_is_box == requires_box)
+                #         if c1 and c2:
+                #             color = "green"
+                #         else:
+                #             color = "orange"
+                #     else:
+                #         color = "red"
+                #     if r in self.actions.keys():
+                #         text = "{}: {:.2f}".format(r, score)
+                #         if requires_focus:
+                #             text += ' (0_0)'
+                #         if requires_box:
+                #             text += ' [T]'
+                #         if requires_box is not None and not requires_box:
+                #             text += ' [F]'
+                #         self.actions[r].text = text
+                #     else:
+                #         self.actions[r] = Text('', rotation=0, anchor_x="center", anchor_y="bottom", font_size=12)
+                #         self.b6.add(self.actions[r])
+                #     self.actions[r].pos = 0.5, 0.7 - (0.1 * i)
+                #     self.actions[r].color = color
 
     def on_draw(self, event):
         pass
@@ -480,7 +480,7 @@ if __name__ == '__main__':
                          "edges": [(1, 2)],
                          "fps": 0,
                          "focus": False,
-                         "actions": {},
+                         "action": {},
                          "distance": 0,  # TODO fix
                          "box": [1, 2, 3, 4]
                          }]

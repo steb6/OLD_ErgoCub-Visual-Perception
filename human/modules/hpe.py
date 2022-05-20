@@ -1,9 +1,8 @@
 import copy
 import pickle
-from human.utils.misc import postprocess_yolo_output, homography, is_within_fov
+from human.utils.misc import postprocess_yolo_output, homography, is_within_fov, reconstruct_absolute
 import einops
 import numpy as np
-from utils.output import VISPYVisualizer
 from utils.runner import Runner
 import cv2
 
@@ -77,7 +76,7 @@ class HumanPoseEstimator:
         bbone_in_ = (bbone_in / 255.0).astype(np.float32)
 
         # Metro
-        outputs = self.bbone(bbone_in_)
+        outputs = self.bbone(bbone_in_)  # HPE needs RGB
         logits = self.heads(outputs)
 
         # Get logits 3d
@@ -127,6 +126,10 @@ class HumanPoseEstimator:
         if is_predicted_to_be_in_fov.sum() < is_predicted_to_be_in_fov.size / 4:
             return None, None, None
 
+        # Move the skeleton into estimated absolute position if necessary
+        pred3d = reconstruct_absolute(pred2d, pred3d, new_K[None, ...], is_predicted_to_be_in_fov,
+                                      weak_perspective=False)
+
         # Go back in original space (without augmentation and homography)
         pred3d = pred3d @ homo_inv
 
@@ -146,33 +149,26 @@ class HumanPoseEstimator:
 if __name__ == "__main__":
     from human.utils.params import MetrabsTRTConfig, RealSenseIntrinsics
     from tqdm import tqdm
+    from human.utils.matplotlib_visualizer import MPLPosePrinter
     from utils.input import RealSense
-    from multiprocessing import Queue, Process
+
+    vis = MPLPosePrinter()
 
     h = HumanPoseEstimator(MetrabsTRTConfig(), RealSenseIntrinsics())
 
-    cap = RealSense(width=RealSenseIntrinsics().width, height=RealSenseIntrinsics().width)
-
-    input_queue = Queue(1)
-    output_queue = Queue(1)
-    output_proc = Process(target=VISPYVisualizer.create_visualizer,
-                          args=(output_queue, input_queue))
-    output_proc.start()
+    cap = RealSense()
+    # cap = cv2.VideoCapture(2)
+    # cap = cv2.VideoCapture('assets/test_gaze_no_mask.mp4')
 
     for _ in tqdm(range(10000)):
+    # while True:
         ret, img = cap.read()
-        pose3d_root, edges, bbox = h.estimate(img)
-        if pose3d_root is not None:
-            pose3d_root -= pose3d_root[0]
-            img = cv2.flip(img, 0)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            elements = {"img": img,
-                        "pose": pose3d_root,
-                        "edges": edges,
-                        "fps": 0,
-                        "focus": True,
-                        "actions": {},
-                        "distance": 0,
-                        "box": None
-                        }
-            output_queue.put((elements,))
+        # cv2.imshow("img", img)
+        # img = img[:, 240:-240, :]
+        # img = cv2.resize(img, (640, 480))
+        p, e, _ = h.estimate(img)
+        if p is not None:
+            p = p - p[0]
+            vis.clear()
+            vis.print_pose(p, e)
+            vis.sleep(0.001)

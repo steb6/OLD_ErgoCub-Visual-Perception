@@ -156,3 +156,4 @@ engines
 /grasping/modules/shape_reconstruction/tensorrt/assets/
 /grasping/modules/shape_reconstruction/pytorch/checkpoint/
 grasping_BRUTTO
+*/__pycache__

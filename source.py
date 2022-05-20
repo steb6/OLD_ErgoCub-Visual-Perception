@@ -6,8 +6,6 @@ from queue import Empty
 from multiprocessing.managers import BaseManager, RemoteError
 from typing import Dict, Union
 import pyrealsense2 as rs
-
-from grasping.modules.utils.timer import Timer
 from utils.input import RealSense
 import sys
 from loguru import logger
@@ -105,11 +103,11 @@ def register(manager, processes):
 
 
 def send(queue, data):
-    while not queue.empty():
+    if not queue.empty():
         try:
             queue.get(block=False)
         except Empty:
-            break
+            pass
     queue.put(data)
 
 
