@@ -7,7 +7,7 @@ from open3d.cpu.pybind.geometry import PointCloud
 from open3d.cpu.pybind.utility import Vector3dVector
 from open3d.cpu.pybind.visualization import draw_geometries
 
-from utils.timer import Timer
+from grasping.modules.utils.timer import Timer
 
 
 def torch_qr(points):
@@ -172,9 +172,9 @@ def plot_plane(a, b, c, d):
 
     plane = np.concatenate([xy, z[..., None]], axis=1)
 
-    aux = PointCloud()
-    aux.points = Vector3dVector(plane)
-    return aux
+    # aux = PointCloud()
+    # aux.points = Vector3dVector(plane)
+    return plane
 
 
 def plot_plane2(a, b, c):

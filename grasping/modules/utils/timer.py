@@ -47,6 +47,11 @@ class Timer:
     def compute(self):
         return self.timers[self.name] / self.counters[self.name]
 
+    @classmethod
+    def reset(self):
+        Timer.timers = dict()
+        Timer.counters = dict()
+
     def __enter__(self):
         """Start a new timer as a context manager"""
         self.start()

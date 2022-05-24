@@ -12,7 +12,7 @@ class DataSet:
 
     def __init__(self, iterations):
         self.iterations = iterations
-        self.root = Path('./segmentation/tensorrt/assets/real_data')
+        self.root = Path('grasping/modules/segmentation/tensorrt/assets/real_data')
 
         tr = T.Compose([T.ToTensor(),
                         T.Resize((192, 256), InterpolationMode.BILINEAR),

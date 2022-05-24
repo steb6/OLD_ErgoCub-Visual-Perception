@@ -1,41 +1,25 @@
 import copy
 
 import numpy as np
+from vispy import scene
+from vispy.scene import Markers
+from vispy.visuals import LineVisual
 
+from grasping.modules.ransac.forge.fit_plane_speed import plot_plane
 from grasping.modules.ransac.trt_ransac import TrTRansac
 
 
 # TODO NOTE
 # In order to see the visualization correctly, one should stay in the coordinate frame, looking towards +z with +x
 # facing towards -x and +y facing towards -y
+from grasping.modules.seg_pcr_ge.eval.output import plot_line
+from utils.visualization import draw_geometries
 
 
 class GraspEstimator:
     def __init__(self, ransac):
         self.ransac = TrTRansac(ransac)
         pass
-
-    @staticmethod
-    def create_rotation_matrix(a, b):
-        """
-        Creates the rotation matrix such that b = R @ a
-        from https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
-        Args:
-            a: np.array (,3), unit vector already normalized
-            b: np.array (,3), unit vector already normalized
-        Returns:
-            R: np.array(3, 3), transformation matrix
-        """
-        v = np.cross(a, b)
-
-        c = np.dot(a, b)
-
-        vx = np.array([[0, -v[2], v[1]],
-                       [v[2], 0, -v[0]],
-                       [-v[1], v[0], 0]])
-
-        R = np.eye(3) + vx + np.dot(vx, vx) * (1 / (1 + c))
-        return R
 
     def find_poses(self, points, dist, iterations):
         """
@@ -57,11 +41,11 @@ class GraspEstimator:
         if candidates is None:
             return None
 
-        planes, points = candidates
+        planes, face_points = candidates
 
         # Take the normals of the planes and the mean of the extracted points
         normals = planes[..., :3]
-        centers = np.array([np.mean(surface, axis=0) for surface in points])
+        centers = np.array([np.mean(surface, axis=0) for surface in face_points])
 
         right, left, front, back, top, bottom = order_planes(centers, planes)
 
@@ -95,13 +79,32 @@ class GraspEstimator:
             vertices += [line_plane(line, plane)]
         top_left, top_right, bottom_right, bottom_left = vertices
 
+        # This way (1, 1) is the top-right vertex of the face
         u, v, = x * np.linalg.norm(bottom_right - bottom_left), y * np.linalg.norm(top_left - bottom_left)
 
-        # The minus is necessary because the vector points downward (because of cross product)
-        right_center = (u * bottom_line[1] - v * front_line[1]) + bottom_left
+        r = (bottom_right - bottom_left) / np.linalg.norm(bottom_right - bottom_left)
+        s = (top_left - bottom_left) / np.linalg.norm(top_left - bottom_left)
 
-        u = bottom_left + x * np.linalg.norm(bottom_right - bottom_left)
-        v = bottom_left + y * np.linalg.norm(top_left - bottom_left)
+        # + bottom left is for translating the point to the correct position
+        # the scalar product correct for the rotation of the new point
+        right_center = (u * r + v * s) + bottom_left
+
+        # u = bottom_left + x * np.linalg.norm(bottom_right - bottom_left)
+        # v = bottom_left + y * np.linalg.norm(top_left - bottom_left)
+        # TODO Remove
+        # scatter3 = Markers(pos=points, face_color=(1, 0, 0, .5))
+        # axis = scene.XYZAxis(width=5)
+        #
+        # r_hand = scene.XYZAxis(width=10)
+        # r_hand._pos = (rotation @ r_hand._pos.T).T + right_center
+
+        # normal = scene.Line(pos=np.array([[0, 0, 0], right_normal]), width=5, color=(1, 1, 0, 1))
+        # prediction = scene.Line(pos=np.array([[0, 0, 0], z_axis]) @ R1.T, width=5, color=(1, 0, 1, 1))
+
+        # draw_geometries(
+        #     [scatter3, axis, r_hand] + [Markers(pos=v[None, ...], face_color=c + (1,), size=20)
+        #                         for c, v in
+        #                         zip([(1, 0, 0)], [right_center])])
 
         # right_center = centers[right]
         left_center = line_plane([right_center, right_normal], planes[left])
