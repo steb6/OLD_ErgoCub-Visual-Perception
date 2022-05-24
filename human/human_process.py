@@ -54,8 +54,10 @@ class Human(Node):
         self.fps_s = []
         self.last_poses = []
 
-        self.grasping_queue = self.manager.get_queue('grasping_out')
+        self.grasping_queue = self.manager.get_queue('grasping_human')
         self.last_box_position = np.array([0, 0, 0])
+
+        self._out_queues['visualizer'] = self.manager.get_queue('human_visualizer')
 
     def loop(self, data):
         img = data['rgb']

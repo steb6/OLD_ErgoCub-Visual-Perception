@@ -13,7 +13,6 @@ from loguru import logger
 from scipy.spatial.transform import Rotation
 
 from grasping.modules.utils.misc import draw_mask
-from human.modules.focus import FocusDetector
 from human.utils.params import RealSenseIntrinsics
 
 logger.remove()
@@ -42,9 +41,9 @@ class Visualizer(Process):
 
         logger.success('Connected to manager.')
 
-        self.human_in = manager.get_queue('vis_in_human')
-        self.human_out = manager.get_queue('vis_out_human')
-        self.grasping_in = manager.get_queue('vis_in_grasping')
+        self.human_in = manager.get_queue('human_visualizer')
+        self.human_out = manager.get_queue('visualizer_human')
+        self.grasping_in = manager.get_queue('grasping_visualizer')
 
         self.widgets = []
         self.builders = {}
@@ -74,14 +73,6 @@ class Visualizer(Process):
             self.canvas.central_widget.children[0].parent = None
             self.grid = self.canvas.central_widget.add_grid()
             self.add_all_widgets(event.visual.name, {'row': 0, 'col': 1, 'row_span': 4, 'col_span': 2})
-
-            # if self.last_widget is None:
-            #     self.last_widget = event.visual
-            # else:
-            #     self.last_widget.camera = self.center.camera
-
-            # self.center.camera = event.visual.camera
-            # self.center = event.visual
 
     def build_gui(self):
         logger.debug('Started gui building')
@@ -176,7 +167,7 @@ class Visualizer(Process):
             self.scatter4 = Markers(parent=b4.scene)
             self.r_hand = scene.XYZAxis(parent=b4.scene, width=10)
             self.l_hand = scene.XYZAxis(parent=b4.scene)
-            axis = scene.XYZAxis(parent=b4.scene, width=10)
+            scene.XYZAxis(parent=b4.scene, width=10)
             b4.events.mouse_press.connect(self.highlight)
             self.widgets.append([b4, {'row': 3, 'col': 0}])
             self.test = b4
@@ -315,35 +306,25 @@ class Visualizer(Process):
 
             self.scatter3.set_data((data['scene'][..., :3]) @ R, edge_color=data['scene'][..., 3:],
                                    face_color=data['scene'][..., 3:])
-            self.scatter4.set_data(
-                ((data['reconstruction']) * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array(
-                    [1, -1, 1]), edge_color='blue', face_color='blue', size=5)
-            if data['poses'] is not None:
-                poses = data['poses']
-                center_right = ((poses[0] * np.array([1, 1, -1])) * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array([1, -1, 1])
-                poses[2] = (poses[2] * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array([1, -1, 1])
 
-                pos = np.array([[0, 0, 0],
-                                [1, 0, 0],
-                                [0, 0, 0],
-                                [0, 1, 0],
-                                [0, 0, 0],
-                                [0, 0, 1]]) * 0.1
-                pos = pos @ poses[1] @ R * np.array([1, -1, 1])
-                pos = pos + center_right
+            denormalized_pc = (np.block([data['reconstruction'], np.ones([data['reconstruction'].shape[0], 1])]) @ data['transform'])[..., :3]
+            self.scatter4.set_data(denormalized_pc @ R, edge_color='blue', face_color='blue', size=5)
 
-                # pos = np.tile(poses[0], [6, 1])
-                # a = np.eye(3) @ poses[1]
-                # pos[1] = a[0]
-                # pos[3] = a[1]
-                # pos[5] = a[2]
-                self.r_hand.set_data(pos)
+            hands = data['hands']
+            if hands is not None:
+                right_hand = np.concatenate([np.zeros([1, 3]), np.eye(3)])
+                left_hand = np.concatenate([np.zeros([1, 3]), np.eye(3)])
+
+                right_hand = (np.block([right_hand, np.ones([4, 1])]) @ hands['right'])[:, :3]
+                left_hand = (np.block([left_hand, np.ones([4, 1])]) @ hands['left'])[:, :3]
+
+                self.r_hand.set_data(right_hand[[0, 1, 0, 2, 0, 3]])
+                self.l_hand.set_data(left_hand[[0, 1, 0, 2, 0, 3]])
 
             # text = '\n'.join([f'{key}: {value:.2f} fps' for (key, value) in data['fps'].items()])
             # self.avg_fps.text = text
 
 
-        print(1 / (time.perf_counter() - start))
         ##################
         ##### Human ######
         ##################

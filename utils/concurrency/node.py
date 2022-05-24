@@ -45,9 +45,7 @@ class Node(Process, ABC):
         self.manager.connect()
         self._in_queue = self.manager.get_queue(self.name)
 
-        self._out_queue = self.manager.get_queue(f'vis_in_{self.name}')
-
-
+        self._out_queues = {}
 
     def _startup(self):
         logger.info('Starting up...')
@@ -84,13 +82,15 @@ class Node(Process, ABC):
             return None
 
     def _send_all(self, data):
-        while not self._out_queue.empty():
-            try:
-                self._out_queue.get(block=False)
-            except Empty:
-                break
+        for dest in data:
 
-        self._out_queue.put(data)
+            while not self._out_queues[dest].empty():
+                try:
+                    self._out_queues[dest].get(block=False)
+                except Empty:
+                    break
+
+            self._out_queues[dest].put(data[dest])
 
     def startup(self):
         pass
