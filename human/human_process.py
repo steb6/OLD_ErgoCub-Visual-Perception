@@ -6,7 +6,6 @@ from utils.concurrency import Node
 import time
 import numpy as np
 from multiprocessing import Queue, Process
-import cv2
 
 
 def run_module(module, configurations, input_queue, output_queue):
@@ -65,14 +64,14 @@ class Human(Node):
         # Start independent modules
         self.hpe_in.put(img)
         self.focus_in.put(img)
-        pose3d_abs, edges, human_bbox = self.hpe_out.get()
+        pose3d_abs, pose2d, edges, human_bbox = self.hpe_out.get()
         focus_ret = self.focus_out.get()
 
         # Focus
         focus = False
-        face_bbox = None
+        face = None
         if focus_ret is not None:
-            focus, face_bbox = focus_ret
+            focus, face = focus_ret
 
         # Compute distance
         d = None
@@ -86,15 +85,15 @@ class Human(Node):
         if len(poses) > 0:
             pose = list(poses.keys())[list(poses.values()).index(max(poses.values()))]
 
-        # Get 2d skeleton
-        points2d = None
-        if pose3d_abs is not None:
-            points2d, _ = cv2.projectPoints(pose3d_abs * 2.2, np.array([0, 0, 0], dtype=np.float32)[None, ...],
-                                            np.array([0, 0, 0], dtype=np.float32)[None, ...],
-                                            RealSenseIntrinsics().K,
-                                            np.array([[0.], [0.], [0.], [0.], [0.]]))
-            points2d = points2d.astype(int)
-            points2d = points2d[:, 0, :]
+        # # Get 2d skeleton
+        # pose2d = None
+        # if pose3d_abs is not None:
+        #     pose2d, _ = cv2.projectPoints(pose3d_abs * 2.2, np.array([0, 0, 0], dtype=np.float32)[None, ...],
+        #                                   np.array([0, 0, 0], dtype=np.float32)[None, ...],
+        #                                   RealSenseIntrinsics().K,
+        #                                   np.array([[0.], [0.], [0.], [0.], [0.]]))
+        #     pose2d = pose2d.astype(int)
+        #     pose2d = pose2d[:, 0, :]
 
         # Get box position
         # Wait
@@ -109,7 +108,7 @@ class Human(Node):
         # Select manually correct action
         action = None
         if pose is not None:
-            if poses[pose] > 0.7:  # Filter uncertainty
+            if poses[pose] > 0.6:  # Filter uncertainty
                 if pose == "stand":
                     action = "stand: {:.2f}".format(poses[pose])
                 if pose == "safe" and box_distance != -1:
@@ -125,15 +124,15 @@ class Human(Node):
 
         # Get box center
         elements = {"img": img,
-                    "pose": pose3d_root,
+                    "pose": pose3d_abs * 2.2 if pose3d_abs is not None else None,
                     "edges": edges,
                     "focus": focus,
                     "action": action,
                     "distance": d,
                     "human_bbox": human_bbox,
-                    "face_bbox": face_bbox,
+                    "face": face,
                     "box_center": box_position,
-                    "points2d": points2d
+                    "pose2d": pose2d
                     }
 
         # # Compute fps
@@ -141,7 +140,7 @@ class Human(Node):
         self.fps_s.append(1. / (end - start) if (end - start) != 0 else 0)
         fps_s = self.fps_s[-10:]
         fps = sum(fps_s) / len(fps_s)
-        print(fps)
+        # print(fps)
 
         return elements
 

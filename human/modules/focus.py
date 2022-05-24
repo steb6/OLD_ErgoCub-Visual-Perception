@@ -5,6 +5,7 @@ from scipy.spatial.transform import Rotation
 import yaml
 from utils.input import RealSense
 import numpy as np
+from human.utils.params import FocusConfig
 
 
 class FocusDetector:
@@ -158,7 +159,7 @@ if __name__ == "__main__":
         f = det.estimate(img)
 
         if f is not None:
-            _, f = f
+            _, f, close = f
 
             # f.head_pose_rot.head_pose = f.head_pose_rot.as_rotvec() @ f.normalizing_rot
 
@@ -168,7 +169,7 @@ if __name__ == "__main__":
             img = det.print_score(img, f)
             img = det.print_bbox(img, f)
 
-            if det.is_close:
+            if close:
                 img = det.print_gaze_pose(img, f)
             else:
                 img = det.print_head_pose(img, f)

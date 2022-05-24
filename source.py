@@ -49,6 +49,7 @@ def main():
 
             while True:
                 start = time.perf_counter()
+                # if i==0:  # TODO REMOVE DEBUG
                 rgb, depth = camera.read()
 
                 # fps1 += 1 / (time.perf_counter() - start)
