@@ -224,3 +224,30 @@ def reconstruct_absolute(coords2d, coords3d_rel, intrinsics, is_predicted_to_be_
 
 def back_project(camcoords2d, delta_z, z_offset):
     return to_homogeneous(camcoords2d) * np.expand_dims(delta_z + np.expand_dims(z_offset, -1), -1)
+
+
+def is_pose_consistent_with_box(pose2d, box):
+    """Check if pose prediction is consistent with the original box it was based on.
+    Concretely, check if the intersection between the pose's bounding box and the detection has
+    at least half the area of the detection box. This is like IoU but the denominator is the
+    area of the detection box, so that truncated poses are handled correctly.
+    """
+
+    # TODO MINE
+    pose2d = np.concatenate((np.clip(pose2d[:, 0], 0, 640)[..., None],
+                             np.clip(pose2d[:, 1], 0, 480)[..., None]), axis=-1)
+    posebox_start = np.concatenate((np.array(np.min(pose2d[:, 0]))[None, ...],
+                                    np.array(np.min(pose2d[:, 1]))[None, ...]))
+    posebox_end = np.concatenate((np.array(np.max(pose2d[:, 0]))[None, ...],
+                                  np.array(np.max(pose2d[:, 1]))[None, ...]))
+    box_start = np.array([box[0], box[1]])
+    box_end = np.array([box[2], box[3]])
+    box_area = (box_end - box_start)[0] * (box_end - box_start)[1]
+
+    intersection_start = np.concatenate((np.array(np.max([box_start[0], posebox_start[0]]))[..., None],
+                                        np.array(np.max([box_start[1], posebox_start[1]]))[..., None]))
+    intersection_end = np.concatenate((np.array(np.min([box_end[0], posebox_end[0]]))[..., None],
+                                      np.array(np.min([box_end[1], posebox_end[1]]))[..., None]))
+    intersection_area = (intersection_end - intersection_start)[0] * \
+                        (intersection_end - intersection_start)[1]
+    return intersection_area > box_area * 0.5

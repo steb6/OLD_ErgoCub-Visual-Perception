@@ -13,6 +13,7 @@ from loguru import logger
 from scipy.spatial.transform import Rotation
 
 from grasping.modules.utils.misc import draw_mask
+from human.modules.focus import FocusDetector
 from human.utils.params import RealSenseIntrinsics
 
 logger.remove()
@@ -70,7 +71,6 @@ class Visualizer(Process):
 
     def highlight(self, event):
         if event.type == 'mouse_press' and event.button == 2:
-
             self.canvas.central_widget.children[0].parent = None
             self.grid = self.canvas.central_widget.add_grid()
             self.add_all_widgets(event.visual.name, {'row': 0, 'col': 1, 'row_span': 4, 'col_span': 2})
@@ -82,7 +82,6 @@ class Visualizer(Process):
 
             # self.center.camera = event.visual.camera
             # self.center = event.visual
-
 
     def build_gui(self):
         logger.debug('Started gui building')
@@ -103,9 +102,9 @@ class Visualizer(Process):
         ######################
         ##### View Boxes #####
         ######################
-                ######################
-                ###### Grasping ######
-                ######################
+        ######################
+        ###### Grasping ######
+        ######################
         # Mask Visualization 1
         def build_mask1(row=0, col=0, row_span=1, col_span=1):
             b1 = ViewBox(name='mask1')
@@ -177,18 +176,21 @@ class Visualizer(Process):
             b4.events.mouse_press.connect(self.highlight)
             self.widgets.append([b4, {'row': 3, 'col': 0}])
             self.test = b4
+
         self.builders['pc2'] = build_pc2
-                ######################
-                ####### Human ########
-                ######################
+
+        ######################
+        ####### Human ########
+        ######################
 
         def human_1(row=0, col=3, row_span=1, col_span=1):
             b5 = ViewBox(name='human_1')
             self.grid.add_widget(b5, row=row, col=col, row_span=row_span, col_span=col_span)
             b5.border_color = (0.5, 0.5, 0.5, 1)
-            b5.camera = scene.TurntableCamera(45, elevation=30, azimuth=0, distance=2)
+            b5.camera = scene.TurntableCamera(elevation=-90, azimuth=0, distance=0)
             self.lines = []
             Plot3D = scene.visuals.create_visual_node(visuals.LinePlotVisual)
+            # Skeleton
             for _ in range(30):
                 self.lines.append(Plot3D(
                     [],
@@ -200,9 +202,14 @@ class Visualizer(Process):
                     marker_size=1,
                 ))
                 b5.add(self.lines[_])
-            coords = scene.visuals.GridLines(parent=b5.scene)
+            # Box  # TODO ADD BOX
+            self.box = Markers(parent=b5.scene)
+            # Rest
+            # coords = scene.visuals.GridLines(parent=b5.scene)
+            axis = scene.visuals.XYZAxis(parent=b5.scene)
             b5.events.mouse_press.connect(self.highlight)
             self.widgets.append([b5, {'row': 0, 'col': 3}])
+
         self.builders['human_1'] = human_1
 
         # Info
@@ -225,6 +232,7 @@ class Visualizer(Process):
             self.b6.add(self.action)
             self.b6.events.mouse_press.connect(self.highlight)
             self.widgets.append([self.b6, {'row': 1, 'col': 3}])
+
         self.builders['human_2'] = human_2
 
         # Image
@@ -249,11 +257,12 @@ class Visualizer(Process):
             self.b8.border_color = (0.5, 0.5, 0.5, 1)
 
             self.avg_fps = Text('', color='white', rotation=0, anchor_x="center", anchor_y="bottom",
-                            font_size=12, pos=(0.5, 0.95))
+                                font_size=12, pos=(0.5, 0.95))
 
             self.b8.add(self.avg_fps)
             self.b8.events.mouse_press.connect(self.highlight)
             self.widgets.append([self.b8, {'row': 1, 'col': 3}])
+
         self.builders['speed'] = speed
 
         self.add_all_widgets()
@@ -294,11 +303,16 @@ class Visualizer(Process):
             R = Rotation.from_euler('xyz', [-90, 0, 0], degrees=True).as_matrix()
             self.image1.set_data(rgb_mask[::-1, ..., ::-1])
             self.image2.set_data(depth_mask[::-1, ...])
-            self.scatter1.set_data((data['partial'] @ R) * np.array([1, -1, 1]), edge_color='orange', face_color='orange', size=5)
-            self.scatter2.set_data((data['reconstruction'] @ R) * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
+            self.scatter1.set_data((data['partial'] @ R) * np.array([1, -1, 1]), edge_color='orange',
+                                   face_color='orange', size=5)
+            self.scatter2.set_data((data['reconstruction'] @ R) * np.array([1, -1, 1]), edge_color='blue',
+                                   face_color='blue', size=5)
 
-            self.scatter3.set_data((data['scene'][..., :3]) @ R, edge_color=data['scene'][..., 3:], face_color=data['scene'][..., 3:])
-            self.scatter4.set_data(((data['reconstruction']) * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), edge_color='blue', face_color='blue', size=5)
+            self.scatter3.set_data((data['scene'][..., :3]) @ R, edge_color=data['scene'][..., 3:],
+                                   face_color=data['scene'][..., 3:])
+            self.scatter4.set_data(
+                ((data['reconstruction']) * (data['var'] * 2) + data['mean'] * np.array([1, 1, -1])) @ R * np.array(
+                    [1, -1, 1]), edge_color='blue', face_color='blue', size=5)
             if data['poses'] is not None:
                 p = data['poses']
                 pos = np.tile(p[0], [6, 1])
@@ -320,111 +334,84 @@ class Visualizer(Process):
             if not data:
                 return
 
-            if "log" in data:
-                self.log.text = data["log"]
+            edges = data["edges"]
+            pose = data["pose"]
+            img = data["img"]
+            focus = data["focus"]
+            action = data["action"]
+            distance = data["distance"]
+            human_bbox = data["human_bbox"]
+            face = data["face"]
+            box_center_3d = data["box_center"]
+            pose2d = data["pose2d"]
+
+            # POSE
+            if pose is not None:
+                for i, edge in enumerate(edges):
+                    self.lines[i].set_data((pose[[edge[0], edge[1]]]), color='purple')
             else:
-                edges = data["edges"]
-                pose = data["pose"]
-                img = data["img"]
-                focus = data["focus"]
-                action = data["action"]
-                distance = data["distance"]
-                human_bbox = data["human_bbox"]
-                face_bbox = data["face_bbox"]
-                box_center_3d = data["box_center"]
-                points2d = data["points2d"]
+                for i in list(range(len(self.lines))):
+                    self.lines[i].set_data(color='grey')
 
-                # POSE
-                if pose is not None:
-                    theta = 90
-                    R = np.matrix([[1, 0, 0],
-                                   [0, math.cos(theta), -math.sin(theta)],
-                                   [0, math.sin(theta), math.cos(theta)]])
-                    pose = pose @ R
-                    for i, edge in enumerate(edges):
-                        self.lines[i].set_data((pose[[edge[0], edge[1]]]))
+            # BOX
+            box_center_2d = None
+            if box_center_3d is not None and np.any(box_center_3d):
+                # Draw box with human
+                self.box.set_data(box_center_3d, edge_color='orange', face_color='orange', size=20)
+                # Draw projection of box
+                box_center = box_center_3d
+                box_center_2d = RealSenseIntrinsics().K @ box_center.T
+                box_center_2d = box_center_2d[0:2] / box_center_2d[2, :]
+                box_center_2d = np.round(box_center_2d, 0).astype(int).squeeze()
+            else:
+                self.box.set_data(np.array([0, 0, 0])[None, ...])
 
-                # Box and human
-                box_center_2d = None
-                if box_center_3d is not None and np.any(box_center_3d):
-                    box_center = box_center_3d
-                    box_center_2d = RealSenseIntrinsics().K @ box_center.T
-                    box_center_2d = box_center_2d[0:2] / box_center_2d[2, :]
-                    box_center_2d = np.round(box_center_2d, 0).astype(int).squeeze()
+            # IMAGE
+            if img is not None:
+                if human_bbox is not None:
+                    x1, x2, y1, y2 = human_bbox
+                    img = cv2.rectangle(img,
+                                        (x1, y1), (x2, y2), (0, 0, 255), 1).astype(np.uint8)
+                if face is not None:
+                    x1, y1, x2, y2 = face.bbox.reshape(-1)
+                    img = cv2.rectangle(img,
+                                        (x1, y1), (x2, y2), (255, 0, 0), 1).astype(np.uint8)
+                if box_center_2d is not None:
+                    img = cv2.circle(img, box_center_2d, 5, (0, 255, 0)).astype(np.uint8)
+                if pose2d is not None:
+                    for edge in edges:
+                        c1 = 0 < pose2d[edge[0]][0] < 640 and 0 < pose2d[edge[0]][1] < 480
+                        c2 = 0 < pose2d[edge[1]][0] < 640 and 0 < pose2d[edge[1]][1] < 480
+                        if c1 and c2:
+                            img = cv2.line(img, pose2d[edge[0]], pose2d[edge[1]], (255, 0, 255), 3, cv2.LINE_AA)
+                img = cv2.flip(img, 0)
+                self.image.set_data(img)
 
-                # IMAGE
-                if img is not None:
-                    if human_bbox is not None:
-                        x1, x2, y1, y2 = human_bbox
-                        img = cv2.rectangle(img,
-                                            (x1, y1), (x2, y2), (0, 0, 255), 1).astype(np.uint8)
-                    if face_bbox is not None:
-                        x1, y1, x2, y2 = face_bbox.bbox.reshape(-1)
-                        img = cv2.rectangle(img,
-                                            (x1, y1), (x2, y2), (255, 0, 0), 1).astype(np.uint8)
-                    if box_center_2d is not None:
-                        img = cv2.circle(img, box_center_2d, 5, (0, 255, 0)).astype(np.uint8)
-                    if points2d is not None:
-                        for edge in edges:
-                            c1 = 0 < points2d[edge[0]][0] < 640 and 0 < points2d[edge[0]][1] < 480
-                            c2 = 0 < points2d[edge[1]][0] < 640 and 0 < points2d[edge[1]][1] < 480
-                            if c1 and c2:
-                                img = cv2.line(img, points2d[edge[0]], points2d[edge[1]], (255, 0, 255), 3, cv2.LINE_AA)
-                    img = cv2.flip(img, 0)
-                    self.image.set_data(img)
+            # INFO
+            if focus is not None:
+                if focus:
+                    self.focus.text = "FOCUS"
+                    self.focus.color = "green"
+                else:
+                    self.focus.text = "NOT FOCUS"
+                    self.focus.color = "red"
 
-                # INFO
-                if focus is not None:
-                    if focus:
-                        self.focus.text = "FOCUS"
-                        self.focus.color = "green"
-                    else:
-                        self.focus.text = "NOT FOCUS"
-                        self.focus.color = "red"
+            # FPS
+            self.fps_s.append(1 / (time.time() - self.last_time))
+            self.last_time = time.time()
+            fps_s = self.fps_s[-10:]
+            fps = sum(fps_s) / len(fps_s)
+            if fps is not None:
+                self.fps.text = "FPS: {:.2f}".format(fps)
 
-                # FPS
-                self.fps_s.append(1 / (time.time() - self.last_time))
-                self.last_time = time.time()
-                fps_s = self.fps_s[-10:]
-                fps = sum(fps_s) / len(fps_s)
-                if fps is not None:
-                    self.fps.text = "FPS: {:.2f}".format(fps)
+            # Distance
+            if distance is not None:
+                self.distance.text = "DIST: {:.2f}m".format(distance)
 
-                # Distance
-                if distance is not None:
-                    self.distance.text = "DIST: {:.2f}m".format(distance)
-
-                # Actions
-                self.action.text = str(action)
-                self.action.pos = 0.5, 0.5
-                self.action.color = "green"
-                # # m = max([_[0] for _ in results.values()]) if len(results) > 0 else 0
-                # for i, r in enumerate(results.keys()):
-                #     score, requires_focus, requires_box = results[r]
-                #     # Check if conditions are satisfied
-                #     if score > 0.5:
-                #         c1 = True if not requires_focus else focus
-                #         c2 = True if (requires_box is None) else (there_is_box == requires_box)
-                #         if c1 and c2:
-                #             color = "green"
-                #         else:
-                #             color = "orange"
-                #     else:
-                #         color = "red"
-                #     if r in self.actions.keys():
-                #         text = "{}: {:.2f}".format(r, score)
-                #         if requires_focus:
-                #             text += ' (0_0)'
-                #         if requires_box:
-                #             text += ' [T]'
-                #         if requires_box is not None and not requires_box:
-                #             text += ' [F]'
-                #         self.actions[r].text = text
-                #     else:
-                #         self.actions[r] = Text('', rotation=0, anchor_x="center", anchor_y="bottom", font_size=12)
-                #         self.b6.add(self.actions[r])
-                #     self.actions[r].pos = 0.5, 0.7 - (0.1 * i)
-                #     self.actions[r].color = color
+            # Actions
+            self.action.text = str(action)
+            self.action.pos = 0.5, 0.5
+            self.action.color = "green"
 
     def on_draw(self, event):
         pass
@@ -466,6 +453,7 @@ if __name__ == '__main__':
                          "box": [1, 2, 3, 4]
                          }]
             human_in.put(elements)
+
 
     viz = Visualizer()
     viz.run()

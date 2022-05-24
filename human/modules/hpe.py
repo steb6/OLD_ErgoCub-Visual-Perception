@@ -1,6 +1,7 @@
 import copy
 import pickle
-from human.utils.misc import postprocess_yolo_output, homography, is_within_fov, reconstruct_absolute
+from human.utils.misc import postprocess_yolo_output, homography, is_within_fov, reconstruct_absolute, \
+    is_pose_consistent_with_box
 import einops
 import numpy as np
 from utils.runner import Runner
@@ -59,7 +60,7 @@ class HumanPoseEstimator:
             humans.sort(key=lambda x: x[4], reverse=True)  # Sort with decreasing probability
             human = humans[0]
         else:
-            return None, None, None
+            return None, None, None, None
 
         # Preprocess for BackBone
         x1 = int(human[0] * frame.shape[1]) if int(human[0] * frame.shape[1]) > 0 else 0
@@ -124,7 +125,7 @@ class HumanPoseEstimator:
 
         # If less than 1/4 of the joints is visible, then the resulting pose will be weird
         if is_predicted_to_be_in_fov.sum() < is_predicted_to_be_in_fov.size / 4:
-            return None, None, None
+            return None, None, None, None
 
         # Move the skeleton into estimated absolute position if necessary
         pred3d = reconstruct_absolute(pred2d, pred3d, new_K[None, ...], is_predicted_to_be_in_fov,
@@ -141,9 +142,21 @@ class HumanPoseEstimator:
         else:
             edges = None
 
+        # Project skeleton over image
+        pose2d, _ = cv2.projectPoints(pred3d * 2.2, np.array([0, 0, 0], dtype=np.float32)[None, ...],
+                                      np.array([0, 0, 0], dtype=np.float32)[None, ...],
+                                      self.K,
+                                      np.array([[0.], [0.], [0.], [0.], [0.]]))
+        pose2d = pose2d.astype(int)
+        pose2d = pose2d[:, 0, :]
+
+        # Check if results are consistent with bounding box
+        if not is_pose_consistent_with_box(pose2d, (x1, y1, x2, y2)):
+            return None, None, None, None
+
         pred3d = pred3d[0]  # Remove batch dimension
 
-        return pred3d, edges, (x1, x2, y1, y2)
+        return pred3d, pose2d, edges, (x1, x2, y1, y2)
 
 
 if __name__ == "__main__":
