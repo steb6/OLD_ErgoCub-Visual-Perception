@@ -69,8 +69,7 @@ class FocusDetector:
         # Print head pose
         axes3d = np.eye(3, dtype=float) @ Rotation.from_euler(
             'XYZ', [0, np.pi, 0]).as_matrix()
-        # head_pose = face.head_pose_rot.as_rotvec()  # TODO BEFORE
-        head_pose = np.linalg.inv(face.normalizing_rot.as_matrix()) @ face.head_pose_rot.as_rotvec()  # TODO TRY
+        head_pose = np.linalg.inv(face.normalizing_rot.as_matrix()) @ face.head_pose_rot.as_rotvec()
         axes3d = axes3d * 0.05  # length
         points2d, _ = cv2.projectPoints(axes3d, head_pose, face.head_position,
                                         self.camera_matrix,
@@ -111,10 +110,9 @@ class FocusDetector:
         if len(faces) == 0:
             return None
 
-        fc = faces[0]  # We can only have one face
-        self.gaze_estimator.estimate_gaze(frame, fc)
+        face = faces[0]  # We can only have one face
+        self.gaze_estimator.estimate_gaze(frame, face)
 
-        face = fc
         focus = None
         if face is not None:
 
@@ -124,6 +122,7 @@ class FocusDetector:
             # HUMAN IS CLOSE, USE EYES
             if area > self.area_thr:
                 self.is_close = True
+                face.is_close = True
                 score = face.normalized_gaze_vector[2]
                 score_rot = abs(face.head_pose_rot.as_rotvec()[1])
                 focus = score < self.close_thr and score_rot < self.foc_rot_thr
@@ -131,6 +130,7 @@ class FocusDetector:
             # HUMAN IS NOT CLOSE, USE HEAD POSE
             else:
                 self.is_close = False
+                face.is_close = False
                 head_pose = face.normalized_head_rot2d
                 score = abs(head_pose[1])
                 focus = score < self.dist_thr
@@ -140,7 +140,7 @@ class FocusDetector:
             self.focuses = self.focuses[-self.patience:]
             self.is_focus = self.focuses.count(True) > len(self.focuses) / 2
 
-        return focus, fc
+        return focus, face
 
 
 def convert_pt(point):
@@ -150,16 +150,16 @@ def convert_pt(point):
 if __name__ == "__main__":
     from human.utils.params import FocusConfig, RealSenseIntrinsics
 
-    cap = RealSense(width=RealSenseIntrinsics().width, height=RealSenseIntrinsics().width)
+    cap = RealSense()
 
     det = FocusDetector(FocusConfig())
 
     for _ in tqdm(range(10000000)):
-        ok, img = cap.read()
+        img, _ = cap.read()
         f = det.estimate(img)
 
         if f is not None:
-            _, f, close = f
+            _, f = f
 
             # f.head_pose_rot.head_pose = f.head_pose_rot.as_rotvec() @ f.normalizing_rot
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
             img = det.print_score(img, f)
             img = det.print_bbox(img, f)
 
-            if close:
+            if f.is_close:
                 img = det.print_gaze_pose(img, f)
             else:
                 img = det.print_head_pose(img, f)

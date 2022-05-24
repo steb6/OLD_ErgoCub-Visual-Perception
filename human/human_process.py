@@ -85,16 +85,6 @@ class Human(Node):
         if len(poses) > 0:
             pose = list(poses.keys())[list(poses.values()).index(max(poses.values()))]
 
-        # # Get 2d skeleton
-        # pose2d = None
-        # if pose3d_abs is not None:
-        #     pose2d, _ = cv2.projectPoints(pose3d_abs * 2.2, np.array([0, 0, 0], dtype=np.float32)[None, ...],
-        #                                   np.array([0, 0, 0], dtype=np.float32)[None, ...],
-        #                                   RealSenseIntrinsics().K,
-        #                                   np.array([[0.], [0.], [0.], [0.], [0.]]))
-        #     pose2d = pose2d.astype(int)
-        #     pose2d = pose2d[:, 0, :]
-
         # Get box position
         # Wait
         box_position = self.grasping_queue.get()

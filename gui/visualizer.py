@@ -202,8 +202,19 @@ class Visualizer(Process):
                     marker_size=1,
                 ))
                 b5.add(self.lines[_])
-            # Box  # TODO ADD BOX
+            # Box
             self.box = Markers(parent=b5.scene)
+            # Focus
+            self.focus_vector = Plot3D(
+                    [],
+                    width=3.0,
+                    color="orange",
+                    edge_color="w",
+                    symbol="o",
+                    face_color=(0.2, 0.2, 1, 0.8),
+                    marker_size=1,
+                )
+            b5.add(self.focus_vector)
             # Rest
             # coords = scene.visuals.GridLines(parent=b5.scene)
             axis = scene.visuals.XYZAxis(parent=b5.scene)
@@ -353,11 +364,20 @@ class Visualizer(Process):
                 for i in list(range(len(self.lines))):
                     self.lines[i].set_data(color='grey')
 
+            # GAZE
+            if face is not None:  # TODO FIX
+                # head_pose = np.linalg.inv(face.normalizing_rot.as_matrix()) @ face.head_pose_rot.as_rotvec()
+                # second_point = face.gaze_vector if  else head_pose
+                second_point = face.gaze_vector if face.is_close else face.head_pose_rot.as_rotvec()  # TODO REMOVE DEbuG
+                gaze = np.concatenate((face.head_position[None, ...],
+                                       (face.head_position+second_point)[None, ...]))
+                self.focus_vector.set_data(gaze, color='orange')
+
             # BOX
             box_center_2d = None
             if box_center_3d is not None and np.any(box_center_3d):
                 # Draw box with human
-                self.box.set_data(box_center_3d, edge_color='orange', face_color='orange', size=20)
+                self.box.set_data(box_center_3d, edge_color='orange', face_color='orange', size=50)
                 # Draw projection of box
                 box_center = box_center_3d
                 box_center_2d = RealSenseIntrinsics().K @ box_center.T
