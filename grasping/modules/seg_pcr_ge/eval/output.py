@@ -7,14 +7,14 @@ from open3d.cpu.pybind.visualization import draw_geometries
 import open3d as o3d
 from scipy.spatial.transform import Rotation
 
-from ransac.utils.dataset import TestSet
-from ransac.utils.grasp_estimator import GraspEstimator as GE1
-from ransac.utils.inference import Runner
-from seg_pcr_ge.delete import GraspEstimator as GE2
-from shape_reconstruction.pytorch.utils.pose_generator import PoseGenerator
-from shape_reconstruction.tensorrt.utils.decoder import Decoder
-from shape_reconstruction.tensorrt.utils.inference import Infer
-from utils.timer import Timer
+# from ransac.utils.dataset import TestSet
+# from ransac.utils.grasp_estimator import GraspEstimator as GE1
+# from ransac.utils.inference import Runner
+# from seg_pcr_ge.delete import GraspEstimator as GE2
+# from shape_reconstruction.pytorch.utils.pose_generator import PoseGenerator
+# from shape_reconstruction.tensorrt.utils.decoder import Decoder
+# from shape_reconstruction.tensorrt.utils.inference import Infer
+# from utils.timer import Timer
 
 
 class DataConfig:
@@ -104,9 +104,7 @@ def plot_line(line):
     t = (np.random.rand(1000000, 1) - 0.5) * 2
     l0, l = line
 
-    aux = PointCloud()
-    aux.points = Vector3dVector(l0 + t * l)
-    return aux
+    return l0 + t * l
 
 if __name__ == '__main__':
     main()

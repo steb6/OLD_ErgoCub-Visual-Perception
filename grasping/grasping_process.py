@@ -6,10 +6,16 @@ from queue import Empty
 import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
+from vispy import scene
+from vispy.scene import Markers
 
+from grasping.modules.ransac.forge.fit_plane_speed import plot_plane
+from grasping.modules.seg_pcr_ge.eval.output import plot_line
 from grasping.modules.utils.input import RealSense
 from grasping.modules.utils.timer import Timer
 from utils.concurrency import Node
+from utils.visualization import draw_geometries, draw_geometries_img
+
 
 class Grasping(Node):
     def __init__(self):
@@ -48,9 +54,12 @@ class Grasping(Node):
         self.denoising = Denoising()
 
         self.out_queue = self.manager.get_queue('grasping_out')
+        self.test = self.manager.get_queue('debug')
+        self.debug = 0
 
 
     def loop(self, data):
+        right_t, left_t = None, None
 
         rgb = data['rgb']
         depth = data['depth']
@@ -117,6 +126,14 @@ class Grasping(Node):
 
                 poses = self.grasp_estimator.find_poses(res * np.array([1, 1, -1]), 0.001, 5000)
                 # poses = None
+
+                if poses is not None:
+                    R = Rotation.from_euler('xyz', [180, 0, 0], degrees=True).as_matrix()
+                    right_t = compose_transformations([poses[1].T, poses[0][np.newaxis] * (var * 2) + mean, R])
+                    left_t = compose_transformations([poses[3].T, poses[2][np.newaxis] * (var * 2) + mean, R])
+
+                else:
+                    print('Couldn\'t generate hand poses')
             else:
                 print('Warning: corrupted results. Probable cause: too much input noise')
                 poses = None
@@ -143,27 +160,52 @@ class Grasping(Node):
         #     print(f'{k}: {1 / (Timer.timers[k] / v)}', end=' ')
         # print(f'tot: {fps}', end=' ')
 
-        # avg_fps = {name: 1 / Timer(name).compute() for name in Timer.timers}
+        avg_fps = {name: 1 / Timer(name).compute() for name in Timer.timers}
+        print(avg_fps)
 
-        if not self.out_queue.empty():
-            try:
-                self.out_queue.get(block=False)
-            except Empty:
-                pass
-        R = Rotation.from_euler('x', 0, degrees=True).as_matrix()
-        self.out_queue.put(
-            np.mean((res * (var * 2) + mean * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), axis=0)[None, ...])
+        # if not self.out_queue.empty():
+        #     try:
+        #         self.out_queue.get(block=False)
+        #     except Empty:
+        #         pass
+        # R = Rotation.from_euler('x', 0, degrees=True).as_matrix()
+        # self.out_queue.put(
+        #     np.mean((res * (var * 2) + mean * np.array([1, 1, -1])) @ R * np.array([1, -1, 1]), axis=0)[None, ...])
 
-        # return {}
-        # o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
-        # return {'rgb': rgb, 'depth': depth, 'mask': mask, 'distance': distance, 'partial': normalized_pc,
-        #         'scene': np.concatenate([np.array(o3d_scene.points), np.array(o3d_scene.colors)], axis=1),
-        #         'reconstruction': res, 'poses': poses,
-        #         'mean': mean, 'var': var, 'fps': avg_fps}
+        if self.debug == 0:
+            data = {}
+        elif self.debug == 1:
+            data = {'right_t': right_t, 'left_t': left_t}
+        elif self.debug == 2:
+            o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
+            data = {'rgb': rgb, 'depth': depth, 'mask': mask, 'distance': distance, 'partial': normalized_pc,
+             'scene': np.concatenate([np.array(o3d_scene.points), np.array(o3d_scene.colors)], axis=1),
+             'reconstruction': res, 'poses': poses,
+             'mean': mean, 'var': var}
+
+        return data
 
     def shutdown(self):
         pass
 
+
+def compose_transformations(tfs):
+    c = np.eye(4)
+
+    for t in tfs:
+        if not isinstance(t, np.ndarray):
+            raise ValueError('Transformations must be numpy.ndarray.')
+
+        if t.shape == (3, 3):
+            c = c @ np.block([[t, np.zeros([3, 1])],
+                              [np.zeros([1, 3]), np.ones([1, 1])]])
+        elif t.shape == (1, 3):
+            c = c @ np.block([[np.eye(3), np.zeros([3, 1])],
+                              [t, np.ones([1, 1])]])
+        else:
+            raise ValueError(f'Shape {t.shape} not allowed.')
+
+    return c
 
 if __name__ == '__main__':
     grasping = Grasping()

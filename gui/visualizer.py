@@ -273,7 +273,7 @@ class Visualizer(Process):
         ##################
         #### Grasping ####
         ##################
-        if not self.grasping_in.empty() and False:
+        if not self.grasping_in.empty():
             data = self.grasping_in.get()
 
             rgb_mask = draw_mask(data['rgb'], data['mask'])

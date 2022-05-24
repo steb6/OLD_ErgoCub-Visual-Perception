@@ -28,7 +28,7 @@ logger.level('ERROR', color='<fg #ed254e>')
 def main():
     set_name('Source')
 
-    processes: Dict[str, Union[Queue, None]] = {'grasping': None, 'human': None, 'speed': None}
+    processes: Dict[str, Union[Queue, None]] = {'grasping': None}
 
     BaseManager.register('get_queue')
     manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
