@@ -318,8 +318,9 @@ class Visualizer(Process):
             self.scatter3.set_data((data['scene'][..., :3]) @ R, edge_color=data['scene'][..., 3:],
                                    face_color=data['scene'][..., 3:])
 
-            denormalized_pc = (np.block([data['reconstruction'], np.ones([data['reconstruction'].shape[0], 1])]) @ data['transform'])[..., :3]
-            self.scatter4.set_data(denormalized_pc @ R, edge_color='blue', face_color='blue', size=5)
+            if data['transform'] is not None:
+                denormalized_pc = (np.block([data['reconstruction'], np.ones([data['reconstruction'].shape[0], 1])]) @ data['transform'])[..., :3]
+                self.scatter4.set_data(denormalized_pc @ R, edge_color='blue', face_color='blue', size=5)
 
             hands = data['hands']
             if hands is not None:
