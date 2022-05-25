@@ -31,7 +31,7 @@ logger.level('ERROR', color='<fg #ed254e>')
 def main():
     set_name('Source')
 
-    processes: Dict[str, Union[Queue, None]] = {'grasping': None}
+    processes: Dict[str, Union[Queue, None]] = {'grasping': None, 'human': None}
 
     BaseManager.register('get_queue')
     manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
@@ -47,7 +47,7 @@ def main():
     # fps1 = 0
     # fps2 = 0
     # i = 1
-    debug = True
+    debug = False
     while True:
         try:
 

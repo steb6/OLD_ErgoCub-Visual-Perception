@@ -88,7 +88,11 @@ def to_homogeneous(x):
     return np.concatenate([x, np.ones_like(x[..., :1])], axis=-1)
 
 
-def is_within_fov(imcoords, offset=16):
+# import time
+# start = time.time()
+def is_within_fov(imcoords, offset=20):
+    # offset = int((time.time() - start)/10) + 16
+    # print(offset)
     lower = np.array(offset).astype(np.float32)
     upper = np.array(256 - offset).astype(np.float32)
     return np.all(np.logical_and(imcoords >= lower, imcoords <= upper), axis=-1)

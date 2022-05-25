@@ -32,7 +32,7 @@ class Denoising:
         from pathlib import Path
         p = (Path("/mnt/") / Path(os.getcwd()).as_posix().replace("C:", "c") / Path("grasping/denoising.bash")).as_posix()
         cmd = ['wsl', p]
-        print(cmd)
+        # print(cmd)
         # cmd = ['wsl', '-d', 'Ubuntu-18.04', '.', '/home/arosasco/grasping/denoise2.sh']
         popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
         for stdout_line in iter(popen.stdout.readline, ""):

@@ -77,8 +77,8 @@ class Grasping(Node):
         denormalize = None
         mean = 0
         var = 1
-        res = np.array([[0, 0, 0]])
-        normalized_pc = np.array([[0, 0, 0]])
+        res = None
+        normalized_pc = None
 
         # Input
         rgb = data['rgb']
@@ -134,7 +134,7 @@ class Grasping(Node):
             res = self.decoder(fast_weights)
 
             if res.shape[0] < 10_000:
-                center = np.mean((np.block([res, np.ones([res.shape[0], 1])]) @ denormalize)[..., :3])[None]
+                center = np.mean((np.block([res, np.ones([res.shape[0], 1])]) @ denormalize)[..., :3], axis=0)[None]
 
                 poses = self.grasp_estimator.find_poses(res @ flip_z, 0.001, 5000)
 
@@ -152,7 +152,7 @@ class Grasping(Node):
 
         output = {}
 
-        output['human'] = {'hands': hands, 'center': center}
+        output['human'] = {'hands': hands, 'center': center, 'mask': mask}
 
         if 'debug' in data and data['debug']:
             o3d_scene = RealSense.rgb_pointcloud(depth, rgb)

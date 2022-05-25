@@ -1,3 +1,6 @@
+import cv2
+from grasping.modules.utils.misc import draw_mask
+from gui.misc import project_pc, project_hands
 from human.modules.focus import FocusDetector
 from human.modules.pr import PoseRecognizer
 from human.modules.hpe import HumanPoseEstimator
@@ -70,7 +73,7 @@ class Human(Node):
         focus_ret = self.focus_out.get()
 
         # Focus
-        focus = False
+        focus = None
         face = None
         if focus_ret is not None:
             focus, face = focus_ret
@@ -89,13 +92,14 @@ class Human(Node):
 
         # Get box position
         # Wait
-        box_position = self.grasping_queue.get()
+        grasping_data = self.grasping_queue.get()
+        box_position = grasping_data['center']
         # No Wait
         # box_position = self.grasping_queue.get() if not self.grasping_queue.empty() else self.last_box_position
         # self.last_box_position = box_position
         box_distance = -1
-        if np.any(box_position):
-            box_distance = np.linalg.norm(np.array([0, 0, 0]) - box_position)
+        if box_position is not None:
+            box_distance = np.linalg.norm(box_position)
 
         # Select manually correct action
         action = None
@@ -107,32 +111,71 @@ class Human(Node):
                     action = "safe: {:.2f}".format(poses[pose])
                 if pose == "unsafe" and box_distance != -1:
                     action = "unsafe: {:.2f}".format(poses[pose])
-                if pose == "hello" and focus:
+                if pose == "hello" and focus is not None and focus:
                     action = "hello: {:.2f}".format(poses[pose])
-                if pose == "wait" and focus and box_distance == -1:
+                if pose == "wait" and focus is not None and focus and box_distance == -1:
                     action = "give: {:.2f}".format(poses[pose])
         if box_distance != -1 and box_distance < 0.7:  # Less than 70 cm
-            action = "get (dist: {:.2f}".format(box_distance)
+            action = "get (dist: {:.2f})".format(box_distance)
 
         # Get box center
-        elements = {"img": img,
-                    "pose": pose3d_abs * 2.2 if pose3d_abs is not None else None,
-                    "edges": edges,
-                    "focus": focus,
-                    "action": action,
-                    "distance": d,
-                    "human_bbox": human_bbox,
-                    "face": face,
-                    "box_center": box_position,
-                    "pose2d": pose2d
-                    }
+        elements = {}
+        if 'debug' in data and data['debug']:
+            elements['visualizer'] = {"img": img,
+                                      "pose": pose3d_abs * 2.2 if pose3d_abs is not None else None,
+                                      "edges": edges,
+                                      "focus": focus,
+                                      "action": action,
+                                      "distance": d,
+                                      "human_bbox": human_bbox,
+                                      "face": face,
+                                      "box_center": box_position,
+                                      "pose2d": pose2d,
+                                      "grasping": grasping_data,
+                                      }
 
         # # Compute fps
         end = time.time()
         self.fps_s.append(1. / (end - start) if (end - start) != 0 else 0)
         fps_s = self.fps_s[-10:]
         fps = sum(fps_s) / len(fps_s)
-        # print(fps)
+
+        # Light visualizer
+        if human_bbox is not None:
+            x1, x2, y1, y2 = human_bbox
+            img = cv2.rectangle(img,
+                                (x1, y1), (x2, y2), (0, 0, 255), 1).astype(np.uint8)
+        if face is not None:
+            x1, y1, x2, y2 = face.bbox.reshape(-1)
+            img = cv2.rectangle(img,
+                                (x1, y1), (x2, y2), (255, 0, 0), 1).astype(np.uint8)
+        if box_position is not None:
+            img = cv2.circle(img, project_pc(box_position)[0], 5, (0, 255, 0)).astype(np.uint8)
+        if pose2d is not None:
+            for edge in edges:
+                c1 = 0 < pose2d[edge[0]][0] < 640 and 0 < pose2d[edge[0]][1] < 480
+                c2 = 0 < pose2d[edge[1]][0] < 640 and 0 < pose2d[edge[1]][1] < 480
+                if c1 and c2:
+                    img = cv2.line(img, pose2d[edge[0]], pose2d[edge[1]], (255, 0, 255), 1, cv2.LINE_AA)
+
+        if grasping_data['mask'] is not None:
+            img = draw_mask(img, grasping_data['mask'])
+
+        if grasping_data['hands'] is not None:
+            hands = grasping_data['hands']
+            img = project_hands(img, hands['right'], hands['left'])
+
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        img = cv2.putText(img, "FPS: {}".format(int(fps)), (10, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
+                          cv2.LINE_AA)
+        img = cv2.putText(img, "{}".format(action) if action is not None else "",
+                          (215, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
+                          cv2.LINE_AA)
+        img = cv2.putText(img, "Focus: {}".format(focus) if focus is not None else "",
+                          (420, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
+                          cv2.LINE_AA)
+        cv2.imshow("", img)
+        cv2.waitKey(1)
 
         return elements
 

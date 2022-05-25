@@ -26,4 +26,5 @@ def draw_mask(rgb, mask):
     # res2 = copy.deepcopy(rgb)
     # res2[mask == 0] = np.array([0, 0, 0])
 
-    return cv2.cvtColor(res1, cv2.COLOR_RGB2BGR) #, cv2.cvtColor(res2, cv2.COLOR_RGB2BGR)
+    return res1
+    # return cv2.cvtColor(res1, cv2.COLOR_RGB2BGR) #, cv2.cvtColor(res2, cv2.COLOR_RGB2BGR)
