@@ -126,7 +126,8 @@ class Grasping(Node):
             normalized_pc[..., -1] = -normalized_pc[..., -1]
 
             # Set-up the inverse transformation
-            denormalize = compose_transformations([flip_z, ((var * 2) + mean)[np.newaxis], R])
+            #   Z axis symmetry, std scaling, mean translation, 180dg rotation
+            denormalize = compose_transformations([flip_z, np.eye(3) * (var * 2), mean[np.newaxis], R])
 
             # Reconstruction
             fast_weights = self.backbone(normalized_pc)
@@ -167,6 +168,8 @@ class Grasping(Node):
 
 
 def compose_transformations(tfs):
+    ''''All 3x3 matrices are padded with an additional row and column from the Identity Matrix
+        All the 1x3 matrices are'''
     c = np.eye(4)
 
     for t in tfs:

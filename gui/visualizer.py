@@ -167,7 +167,7 @@ class Visualizer(Process):
             self.scatter4 = Markers(parent=b4.scene)
             self.r_hand = scene.XYZAxis(parent=b4.scene, width=10)
             self.l_hand = scene.XYZAxis(parent=b4.scene)
-            scene.XYZAxis(parent=b4.scene, width=10)
+            # scene.XYZAxis(parent=b4.scene, width=10)
             b4.events.mouse_press.connect(self.highlight)
             self.widgets.append([b4, {'row': 3, 'col': 0}])
             self.test = b4
@@ -197,7 +197,7 @@ class Visualizer(Process):
                     marker_size=1,
                 ))
                 b5.add(self.lines[_])
-            # Box
+            # Box  # TODO ADD BOX
             self.box = Markers(parent=b5.scene)
             # Focus
             self.focus_vector = Plot3D(
@@ -307,31 +307,40 @@ class Visualizer(Process):
                         thickness,
                         lineType)
 
-            R = Rotation.from_euler('xyz', [-90, 0, 0], degrees=True).as_matrix()
+            # The view in pc2 is denormalized so it needs a different rotation
+            vis_R1 = Rotation.from_euler('x', -90, degrees=True).as_matrix()
+            vis_R2 = Rotation.from_euler('x', 90, degrees=True).as_matrix()
+
             self.image1.set_data(rgb_mask[::-1, ..., ::-1])
             self.image2.set_data(depth_mask[::-1, ...])
-            self.scatter1.set_data((data['partial'] @ R) * np.array([1, -1, 1]), edge_color='orange',
+            self.scatter1.set_data((data['partial'] @ vis_R1) * np.array([1, -1, 1]), edge_color='orange',
                                    face_color='orange', size=5)
-            self.scatter2.set_data((data['reconstruction'] @ R) * np.array([1, -1, 1]), edge_color='blue',
-                                   face_color='blue', size=5)
 
-            self.scatter3.set_data((data['scene'][..., :3]) @ R, edge_color=data['scene'][..., 3:],
-                                   face_color=data['scene'][..., 3:])
+            if data['reconstruction'] is not None:
+                self.scatter2.set_data((data['reconstruction'] @ vis_R1) * np.array([1, -1, 1]), edge_color='blue',
+                                       face_color='blue', size=5)
 
-            if data['transform'] is not None:
+                self.scatter3.set_data(data['scene'][..., :3] @ vis_R2, edge_color=data['scene'][..., 3:],
+                                       face_color=data['scene'][..., 3:])
+
                 denormalized_pc = (np.block([data['reconstruction'], np.ones([data['reconstruction'].shape[0], 1])]) @ data['transform'])[..., :3]
-                self.scatter4.set_data(denormalized_pc @ R, edge_color='blue', face_color='blue', size=5)
+                self.scatter4.set_data(denormalized_pc @ vis_R2, edge_color='blue', face_color='blue', size=5)
 
-            hands = data['hands']
-            if hands is not None:
-                right_hand = np.concatenate([np.zeros([1, 3]), np.eye(3)])
-                left_hand = np.concatenate([np.zeros([1, 3]), np.eye(3)])
+                hands = data['hands']
+                if hands is not None:
+                    right_hand = np.concatenate([np.zeros([1, 3]), np.eye(3)])
+                    left_hand = np.concatenate([np.zeros([1, 3]), np.eye(3)])
 
-                right_hand = (np.block([right_hand, np.ones([4, 1])]) @ hands['right'])[:, :3]
-                left_hand = (np.block([left_hand, np.ones([4, 1])]) @ hands['left'])[:, :3]
+                    right_hand = (np.block([right_hand, np.ones([4, 1])]) @ hands['right'])[:, :3]
+                    left_hand = (np.block([left_hand, np.ones([4, 1])]) @ hands['left'])[:, :3]
 
-                self.r_hand.set_data(right_hand[[0, 1, 0, 2, 0, 3]])
-                self.l_hand.set_data(left_hand[[0, 1, 0, 2, 0, 3]])
+                    right_hand = right_hand @ vis_R2
+                    left_hand = left_hand @ vis_R2
+
+                    self.r_hand.set_data(right_hand[[0, 1, 0, 2, 0, 3]])
+                    self.l_hand.set_data(left_hand[[0, 1, 0, 2, 0, 3]])
+
+                    res = project_hands(data['rgb'], hands['right'], hands['left'])
 
             # text = '\n'.join([f'{key}: {value:.2f} fps' for (key, value) in data['fps'].items()])
             # self.avg_fps.text = text
@@ -436,6 +445,48 @@ class Visualizer(Process):
 
     def on_draw(self, event):
         pass
+
+
+def project_pc(points, k=None):
+    if k is None:
+        intrinsics = {'fx': 612.7910766601562, 'fy': 611.8779296875, 'ppx': 321.7364196777344,
+                      'ppy': 245.0658416748047,
+                      'width': 640, 'height': 480}
+
+        k = np.eye(3)
+        k[0, :] = np.array([intrinsics['fx'], 0, intrinsics['ppx']])
+        k[1, 1:] = np.array([intrinsics['fy'], intrinsics['ppy']])
+
+    points = np.array(points)
+    uv = k @ points.T
+    uv = uv[0:2] / uv[2, :]
+
+    uv = np.round(uv, 0).astype(int)
+
+    return uv.T
+
+
+def project_hands(rgb, right_t, left_t):
+    right_hand = np.concatenate([np.zeros([1, 3]), np.eye(3)])
+    left_hand = np.concatenate([np.zeros([1, 3]), np.eye(3)])
+
+    right_hand = (np.block([right_hand, np.ones([4, 1])]) @ right_t)[:, :3]
+    left_hand = (np.block([left_hand, np.ones([4, 1])]) @ left_t)[:, :3]
+
+    points2d = project_pc(right_hand)
+
+    res = copy.deepcopy(rgb)
+    for i in range(3):
+        res = cv2.line(res, points2d[0], points2d[i + 1], color=np.eye(3)[i] * 255, thickness=10)
+
+    points2d = project_pc(left_hand)
+    for i in range(3):
+        res = cv2.line(res, points2d[0], points2d[i + 1], color=np.eye(3)[i] * 255, thickness=10)
+
+    res = cv2.addWeighted(rgb, 0.7, res, 0.3, 0)
+    res = cv2.cvtColor(res, cv2.COLOR_RGB2BGR)
+
+    return res
 
 
 if __name__ == '__main__':
