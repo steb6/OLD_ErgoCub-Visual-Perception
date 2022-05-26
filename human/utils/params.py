@@ -1,15 +1,15 @@
 class MetrabsTRTConfig(object):
     def __init__(self):
+        self.num_aug = 5  # if zero, disables test time augmentation (available: 0, 5)
         self.yolo_engine_path = 'human/engines/yolo.engine'
-        self.image_transformation_path = 'human/engines/image_transformation1.engine'
-        self.bbone_engine_path = 'human/engines/bbone1.engine'
-        self.heads_engine_path = 'human/engines/heads1.engine'
+        self.image_transformation_path = 'human/engines/image_transformation{}.engine'.format(self.num_aug)
+        self.bbone_engine_path = 'human/engines/bbone{}.engine'.format(self.num_aug)
+        self.heads_engine_path = 'human/engines/heads{}.engine'.format(self.num_aug)
         self.expand_joints_path = 'human/assets/32_to_122.npy'
         self.skeleton_types_path = 'human/assets/skeleton_types.pkl'
         self.skeleton = 'smpl+head_30'
         self.yolo_thresh = 0.3
         self.nms_thresh = 0.7
-        self.num_aug = 0  # if zero, disables test time augmentation
 
 
 class RealSenseIntrinsics(object):

@@ -1,9 +1,11 @@
 import copy
 import pickle
 from human.utils.misc import postprocess_yolo_output, homography, is_within_fov, reconstruct_absolute, \
-    is_pose_consistent_with_box
+    is_pose_consistent_with_box, get_augmentations
 import einops
 import numpy as np
+
+from human.utils.tracking import Sort
 from utils.runner import Runner
 import cv2
 
@@ -23,6 +25,19 @@ class HumanPoseEstimator:
         self.K[1][2] = cam_config.ppy
         self.K[2][2] = 1
 
+        # SMPL+HEAD_30 mirror mapping
+        self.joint_mirror_map = np.array([[1, 2],
+                                          [4, 5],
+                                          [7, 8],
+                                          [10, 11],
+                                          [13, 14],
+                                          [16, 17],
+                                          [18, 19],
+                                          [20, 21],
+                                          [22, 23],
+                                          [25, 26],
+                                          [28, 29]])
+
         # Load conversions
         self.skeleton = model_config.skeleton
         self.expand_joints = np.load(model_config.expand_joints_path)
@@ -34,6 +49,9 @@ class HumanPoseEstimator:
         self.image_transformation = Runner(model_config.image_transformation_path)
         self.bbone = Runner(model_config.bbone_engine_path)
         self.heads = Runner(model_config.heads_engine_path)
+
+        # Load tracking
+        self.tracking = Sort()
 
     def estimate(self, frame):
 
@@ -67,13 +85,26 @@ class HumanPoseEstimator:
         y1 = int(human[1] * frame.shape[0]) if int(human[1] * frame.shape[0]) > 0 else 0
         x2 = int(human[2] * frame.shape[1]) if int(human[2] * frame.shape[1]) > 0 else 0
         y2 = int(human[3] * frame.shape[0]) if int(human[3] * frame.shape[0]) > 0 else 0
+
+        # Tracking
+        res = self.tracking.update(np.array([x1, y1, x2, y2, human[4]])[None, ...])
+        if len(res) > 0:
+            x1, y1, x2, y2, _ = res[0].astype(int)
         new_K, homo_inv = homography(x1, x2, y1, y2, self.K, 256)
+
+        # Test time augmentation TODO ADD GAMMA DECODING
+        if self.num_aug > 0:
+            aug_should_flip, aug_rotflipmat, aug_gammas, aug_scales = get_augmentations(self.num_aug)
+            new_K = np.tile(new_K, (self.num_aug, 1, 1))
+            for k in range(self.num_aug):
+                new_K[k, :2, :2] *= aug_scales[k]
+            homo_inv = aug_rotflipmat @ np.tile(homo_inv[0], (self.num_aug, 1, 1))
 
         # Apply homography
         H = self.K @ np.linalg.inv(new_K @ homo_inv)
         bbone_in = self.image_transformation([frame.astype(int), H.astype(np.float32)])
 
-        bbone_in = bbone_in[0].reshape(1, 256, 256, 3)
+        bbone_in = bbone_in[0].reshape(self.num_aug, 256, 256, 3)  # [0] to get from list
         bbone_in_ = (bbone_in / 255.0).astype(np.float32)
 
         # Metro
@@ -81,7 +112,7 @@ class HumanPoseEstimator:
         logits = self.heads(outputs)
 
         # Get logits 3d
-        logits = logits[0].reshape(1, 8, 8, 288)
+        logits = logits[0].reshape(self.num_aug, 8, 8, 288)
         _, logits2d, logits3d = np.split(logits, [0, 32], axis=3)
         current_format = 'b h w (d j)'
         logits3d = einops.rearrange(logits3d, f'{current_format} -> b h w d j', j=32)  # 5, 8, 8, 9, 32
@@ -124,11 +155,19 @@ class HumanPoseEstimator:
         is_predicted_to_be_in_fov = is_within_fov(pred2d)
 
         # If less than 1/4 of the joints is visible, then the resulting pose will be weird
+        # TODO START DEBUG is_within_fov value
+        # for img, res, points in zip(bbone_in[2:3], is_predicted_to_be_in_fov[2:3], pred2d[2:3]):
+        #     for flag, point in zip(res, points):
+        #         img = cv2.circle(img, point.astype(int), 5, (255, 0, 0) if flag else (0, 0, 255))
+        #     cv2.imshow("", img.astype(np.uint8))
+        #     cv2.waitKey(1)
+        # TODO END DEBUG
         if is_predicted_to_be_in_fov.sum() < is_predicted_to_be_in_fov.size / 4:
             return None, None, None, None
+        # TODO TRY TO USE REAL INTRINSICS AND MULTIPLY WITH DIFFERENT VALUE
 
         # Move the skeleton into estimated absolute position if necessary
-        pred3d = reconstruct_absolute(pred2d, pred3d, new_K[None, ...], is_predicted_to_be_in_fov,
+        pred3d = reconstruct_absolute(pred2d, pred3d, new_K, is_predicted_to_be_in_fov,
                                       weak_perspective=False)
 
         # Go back in original space (without augmentation and homography)
@@ -142,6 +181,17 @@ class HumanPoseEstimator:
         else:
             edges = None
 
+        # Mirror predictions
+        if self.num_aug > 0:
+            for k in range(len(self.joint_mirror_map)):
+                aux = pred3d[aug_should_flip, self.joint_mirror_map[k, 0]]
+                pred3d[aug_should_flip, self.joint_mirror_map[k, 0]] = pred3d[aug_should_flip,
+                                                                              self.joint_mirror_map[k, 1]]
+                pred3d[aug_should_flip, self.joint_mirror_map[k, 1]] = aux
+
+        # Aggregate results
+        pred3d = pred3d.mean(axis=0)
+
         # Project skeleton over image
         pose2d, _ = cv2.projectPoints(pred3d * 2.2, np.array([0, 0, 0], dtype=np.float32)[None, ...],
                                       np.array([0, 0, 0], dtype=np.float32)[None, ...],
@@ -150,11 +200,9 @@ class HumanPoseEstimator:
         pose2d = pose2d.astype(int)
         pose2d = pose2d[:, 0, :]
 
-        # Check if results are consistent with bounding box
+        # Check if results are consistent with bounding box  # TODO SHOULD FILTER AUGMENTATIONS
         if not is_pose_consistent_with_box(pose2d, (x1, y1, x2, y2)):
             return None, None, None, None
-
-        pred3d = pred3d[0]  # Remove batch dimension
 
         return pred3d, pose2d, edges, (x1, x2, y1, y2)
 
@@ -169,19 +217,20 @@ if __name__ == "__main__":
 
     h = HumanPoseEstimator(MetrabsTRTConfig(), RealSenseIntrinsics())
 
-    cap = RealSense()
-    # cap = cv2.VideoCapture(2)
-    # cap = cv2.VideoCapture('assets/test_gaze_no_mask.mp4')
+    # cap = RealSense()
+    cap = cv2.VideoCapture(2)
+    # cap = cv2.VideoCapture('recording.mp4')
 
     for _ in tqdm(range(10000)):
     # while True:
+    #     img, depth = cap.read()
         ret, img = cap.read()
-        # cv2.imshow("img", img)
-        # img = img[:, 240:-240, :]
-        # img = cv2.resize(img, (640, 480))
-        p, e, _ = h.estimate(img)
+        p, _, e, _ = h.estimate(img)
+        vis.clear()
         if p is not None:
             p = p - p[0]
-            vis.clear()
             vis.print_pose(p, e)
-            vis.sleep(0.001)
+        vis.draw()
+        vis.sleep(0.001)
+        # cv2.imshow("", img)
+        # cv2.waitKey(1)

@@ -90,7 +90,7 @@ def to_homogeneous(x):
 
 # import time
 # start = time.time()
-def is_within_fov(imcoords, offset=20):
+def is_within_fov(imcoords, offset=4):
     # offset = int((time.time() - start)/10) + 16
     # print(offset)
     lower = np.array(offset).astype(np.float32)
@@ -255,3 +255,34 @@ def is_pose_consistent_with_box(pose2d, box):
     intersection_area = (intersection_end - intersection_start)[0] * \
                         (intersection_end - intersection_start)[1]
     return intersection_area > box_area * 0.5
+
+
+def get_augmentations(num_aug, rot_aug_linspace_noend=True):
+    # Set up the test-time augmentation parameters
+    aug_gammas = np.linspace(0.6, 1.0, num_aug)
+    aug_angle_range = np.float32(np.deg2rad(25))
+    if rot_aug_linspace_noend:
+        aug_angles = np.linspace(-aug_angle_range, aug_angle_range, num_aug + 1)[:-1]
+    else:
+        aug_angles = np.linspace(-aug_angle_range, aug_angle_range, num_aug)
+    aug_scales = np.concatenate([
+        np.linspace(0.8, 1.0, (num_aug + 1) // 2)[:-1],
+        np.linspace(1.0, 1.1, num_aug - num_aug // 2)], axis=0)
+    aug_should_flip = (np.arange(num_aug) - num_aug // 2) % 2 != 0
+    aug_flipmat = np.array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
+    aug_maybe_flipmat = np.where(
+        aug_should_flip[:, np.newaxis, np.newaxis], aug_flipmat, np.eye(3))
+    aug_rotmat = rotation_mat_zaxis(-aug_angles)
+    aug_rotflipmat = aug_maybe_flipmat @ aug_rotmat
+    return aug_should_flip, aug_rotflipmat, aug_gammas, aug_scales
+
+
+def rotation_mat_zaxis(angle):
+    sin = np.sin(angle)
+    cos = np.cos(angle)
+    _0 = np.zeros_like(angle)
+    _1 = np.ones_like(angle)
+    return np.stack([
+        np.stack([cos, -sin, _0], axis=-1),
+        np.stack([sin, cos, _0], axis=-1),
+        np.stack([_0, _0, _1], axis=-1)], axis=-2)

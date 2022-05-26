@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import open3d as o3d
 import pyrealsense2 as rs
 
 
@@ -74,6 +73,7 @@ class RealSense:
 
     @classmethod
     def rgb_pointcloud(cls, depth_image, rgb_image, intrinsics=None):
+        import open3d as o3d
         depth_image = o3d.geometry.Image(depth_image)
         rgb_image = o3d.geometry.Image(rgb_image)
         rgbd = o3d.geometry.RGBDImage().create_from_color_and_depth(rgb_image, depth_image,
@@ -97,6 +97,7 @@ class RealSense:
 
     @classmethod
     def depth_pointcloud(cls, depth_image, intrinsics=None):
+        import open3d as o3d
         depth_image = o3d.geometry.Image(depth_image)
 
         if intrinsics is None:
