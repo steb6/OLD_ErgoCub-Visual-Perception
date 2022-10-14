@@ -137,7 +137,7 @@ class Human(Node):
                                       }
 
         # # Compute fps
-        end = time.time()
+        end = time.perf_counter()
         self.fps_s.append(1. / (end - start) if (end - start) != 0 else 0)
         fps_s = self.fps_s[-10:]
         fps = sum(fps_s) / len(fps_s)

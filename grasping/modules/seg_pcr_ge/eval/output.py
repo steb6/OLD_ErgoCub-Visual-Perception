@@ -1,9 +1,14 @@
 import numpy as np
 import torch
 import tqdm
-from open3d.cpu.pybind.geometry import PointCloud, TriangleMesh
-from open3d.cpu.pybind.utility import Vector3dVector
-from open3d.cpu.pybind.visualization import draw_geometries
+try:
+    from open3d.cuda.pybind.geometry import PointCloud, TriangleMesh
+    from open3d.cuda.pybind.utility import Vector3dVector
+    from open3d.cuda.pybind.visualization import draw_geometries
+except ImportError:
+    from open3d.cpu.pybind.geometry import PointCloud, TriangleMesh
+    from open3d.cpu.pybind.utility import Vector3dVector
+    from open3d.cpu.pybind.visualization import draw_geometries
 import open3d as o3d
 from scipy.spatial.transform import Rotation
 

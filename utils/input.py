@@ -51,6 +51,9 @@ class RealSense:
             for option in device.get_supported_options():
                 configs['options'][device.name][str(option)[7:]] = str(device.get_option(option))
 
+        # if postprocessing:
+        #     self.decimate = rs.decimation_filter(2)
+
         self.configs = configs
         self.align = rs.align(rs.stream.color)
 
@@ -59,6 +62,10 @@ class RealSense:
 
     def read(self):
         frames = self.pipeline.wait_for_frames(100)
+
+        # if postprocessing:
+        #     frames = self.decimate.process(frames).as_frameset()
+
         aligned_frames = self.align.process(frames)
 
         depth_frame = aligned_frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image

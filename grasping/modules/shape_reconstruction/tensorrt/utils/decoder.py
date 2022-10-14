@@ -9,10 +9,7 @@ from grasping.modules.shape_reconstruction.pytorch.model import PCRNetwork
 class Decoder:
     def __init__(self):
 
-        model = PCRNetwork.load_from_checkpoint('./grasping/modules/shape_reconstruction/pytorch/checkpoint/final', config=ModelConfig)
-
-        model.eval()
-
+        model = PCRNetwork(config=ModelConfig)
         self.sdf = model.sdf
 
     def __call__(self, fast_weights):

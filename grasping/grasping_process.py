@@ -1,22 +1,21 @@
 import copy
 import sys
 import time
-from multiprocessing import Queue, Process
-from queue import Empty
 
 import cv2
 import numpy as np
 from loguru import logger
+# from scipy.spatial.distance import cdist
 from scipy.spatial.transform import Rotation
-from vispy import scene
-from vispy.scene import Markers
 
-from grasping.modules.ransac.forge.fit_plane_speed import plot_plane
-from grasping.modules.seg_pcr_ge.eval.output import plot_line
+from grasping.modules.ransac.build.test import test
+# from sklearn.neighbors import NearestNeighbors
+
+# from grasping.modules.tracking.icp import icp
 from grasping.modules.utils.input import RealSense
-from grasping.modules.utils.timer import Timer
+from grasping.modules.utils.misc import draw_mask
+from gui.misc import project_pc, project_hands
 from utils.concurrency import Node
-from utils.visualization import draw_geometries, draw_geometries_img
 
 logger.remove()
 logger.add(sys.stdout,
@@ -44,21 +43,24 @@ class Grasping(Node):
 
         a = torch.zeros([1]).to('cuda')
         logger.info('Loading Shape Reconstruction engine')
-        self.backbone = InferPcr('grasping/modules/shape_reconstruction/tensorrt/assets/pcr.engine')
+        self.backbone = InferPcr('grasping/modules/shape_reconstruction/tensorrt/assets/pcr_docker.engine')
         logger.success('Shape Reconstruction engine loaded')
 
         from grasping.modules.segmentation.tensorrt.utils.inference import Infer as InferSeg
 
         logger.info('Loading segmentation engine')
-        self.model = InferSeg('./grasping/modules/segmentation/tensorrt/assets/seg_int8.engine')
+        self.model = InferSeg('./grasping/modules/segmentation/tensorrt/assets/seg_fp16_docker.engine')
         logger.success('Segmentation engine loaded')
 
         from grasping.modules.seg_pcr_ge.delete import GraspEstimator
         # from ransac.utils.grasp_estimator import GraspEstimator
 
         logger.info('Loading RANSAC engine')
-        self.ransac = Runner('./grasping/modules/ransac/assets/ransac_5000.engine')
+        self.ransac = Runner('./grasping/modules/ransac/assets/ransac_5000_docker.engine')
         logger.success('RANSAC engine loaded')
+
+        print('Test 1')
+        test(self.ransac)
 
         from grasping.modules.shape_reconstruction.tensorrt.utils.decoder import Decoder
 
@@ -69,6 +71,17 @@ class Grasping(Node):
 
         self._out_queues['human'] = self.manager.get_queue('grasping_human')
         self._out_queues['visualizer'] = self.manager.get_queue('grasping_visualizer')
+        self._out_queues['sink'] = self.manager.get_queue('grasping_sink')
+
+        self.fps_s = []
+        self.max_partial_points = 0
+
+        self.reconstruction = None
+        self.prev_partial = None
+        self.prev_denormalize = None
+
+        print('Test 2')
+        test(self.ransac)
 
     def loop(self, data):
         # Outputs Standard Values
@@ -80,6 +93,7 @@ class Grasping(Node):
         res = None
         normalized_pc = None
 
+        start = time.perf_counter()
         # Input
         rgb = data['rgb']
         depth = data['depth']
@@ -89,8 +103,17 @@ class Grasping(Node):
         flip_z = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
 
         # Pipeline
+        # rgb = cv2.resize(rgb, (640, int(640 * (rgb.shape[0] / rgb.shape[1]))))
+        # rgb = np.concatenate([np.zeros([60, 640, 3]),rgb,np.zeros([60, 640, 3])])
+
+        # depth = cv2.resize(depth, (640, int(640 * (depth.shape[0] / depth.shape[1]))))
+        # depth = np.concatenate([np.zeros([60, 640]), depth, np.zeros([60, 640])])
+        # depth = depth.astype(np.uint16)
+
         mask = self.model(rgb)
         mask = cv2.resize(mask, dsize=(640, 480), interpolation=cv2.INTER_NEAREST)
+
+        # rgb = rgb.astype(np.uint8)
 
         segmented_depth = copy.deepcopy(depth)
         segmented_depth[mask != 1] = 0
@@ -108,6 +131,15 @@ class Grasping(Node):
             # Denoise
             denoised_pc = self.denoising(downsampled_pc)
 
+            # Check tracking TODO move the check to the other tracking if
+            # tracking = False
+            # if denoised_pc.shape[0] > self.max_partial_points:
+            #     self.max_partial_points = denoised_pc.shape[0]
+            #     logger.success('Increased visibility')
+            # else:
+            #     tracking = True
+            #     logger.info('Tracking previous reconstruction')
+
             # Fix Size
             if denoised_pc.shape[0] > 2024:
                 idx = np.random.choice(denoised_pc.shape[0], 2024, replace=False)
@@ -124,19 +156,36 @@ class Grasping(Node):
             var = np.sqrt(np.max(np.sum((size_pc - mean) ** 2, axis=1)))
             normalized_pc = (size_pc - mean) / (var * 2)
             normalized_pc[..., -1] = -normalized_pc[..., -1]
-
             # Set-up the inverse transformation
+
+            # if False and tracking and self.reconstruction is not None and self.prev_partial is not None:
+            #     # Option 1 track object_model and size_pc
+            #     # Option 2 track previous size_pc and size_pc
+            #     icp_transformation = icp(self.prev_partial, size_pc)
+            #     # self.object_model = (np.block([self.object_model, np.ones([self.object_model.shape[0], 1])]) @ icp_transformation.T)[..., :3]
+            #     self.prev_denormalize = compose_transformations([self.prev_denormalize, icp_transformation.T])
+            #     denormalize = compose_transformations([self.prev_denormalize, R])
+            #
+            #     a = (np.block([self.reconstruction, np.ones([self.reconstruction.shape[0], 1])]) @ denormalize)[:, :3]
+            #     b = size_pc @ R
+            #     # Y = cdist(a, b, 'euclidean')
+            #     nbrs = NearestNeighbors(n_neighbors=1).fit(a)
+            #     distances, _ = nbrs.kneighbors(b)
+            #     if np.mean(distances) > 0.005:
+            #         self.max_partial_points = 0
+            # else:
             #   Z axis symmetry, std scaling, mean translation, 180dg rotation
-            denormalize = compose_transformations([flip_z, np.eye(3) * (var * 2), mean[np.newaxis], R])
+            self.prev_denormalize = compose_transformations([flip_z, np.eye(3) * (var * 2), mean[np.newaxis]])
+            denormalize = compose_transformations([self.prev_denormalize, R])
 
             # Reconstruction
             fast_weights = self.backbone(normalized_pc)
-            res = self.decoder(fast_weights)
+            self.reconstruction = self.decoder(fast_weights)
 
-            if res.shape[0] < 10_000:
-                center = np.mean((np.block([res, np.ones([res.shape[0], 1])]) @ denormalize)[..., :3], axis=0)[None]
+            if self.reconstruction.shape[0] < 10_000:
+                center = np.mean((np.block([self.reconstruction, np.ones([self.reconstruction.shape[0], 1])]) @ denormalize)[..., :3], axis=0)[None]
 
-                poses = self.grasp_estimator.find_poses(res @ flip_z, 0.001, 5000)
+                poses = self.grasp_estimator.find_poses(self.reconstruction @ flip_z, 0.001, 5000)
 
                 if poses is not None:
                     hands = {}
@@ -146,7 +195,8 @@ class Grasping(Node):
                     logger.warning('Couldn\'t generate hand poses')
             else:
                 logger.warning('Corrupted reconstruction - check the input point cloud')
-                res = None
+
+            self.prev_partial = size_pc
         else:
             logger.warning('Warning: not enough input points. Skipping reconstruction')
 
@@ -158,8 +208,31 @@ class Grasping(Node):
             o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
             output['visualizer'] = {'rgb': rgb, 'depth': depth, 'mask': mask, 'distance': distance, 'partial': normalized_pc,
              'scene': np.concatenate([np.array(o3d_scene.points) @ R, np.array(o3d_scene.colors)], axis=1),
-             'reconstruction': res, 'hands': hands,
+             'reconstruction': self.reconstruction, 'hands': hands,
              'transform': denormalize}
+
+        # # Compute fps
+        end = time.perf_counter()
+        self.fps_s.append(1. / (end - start) if (end - start) != 0 else 0)
+        fps_s = self.fps_s[-10:]
+        fps = sum(fps_s) / len(fps_s)
+
+        # Light visualizer
+        img = rgb
+        if center is not None:
+            img = cv2.circle(img, project_pc(center)[0], 5, (0, 255, 0)).astype(np.uint8)
+
+        if mask is not None:
+            img = draw_mask(img, mask)
+
+        if hands is not None:
+            img = project_hands(img, hands['right'], hands['left'])
+
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        img = cv2.putText(img, "FPS: {}".format(int(fps)), (10, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
+                          cv2.LINE_AA)
+
+        output = {'sink': {'img': img}}
 
         return output
 
@@ -168,22 +241,26 @@ class Grasping(Node):
 
 
 def compose_transformations(tfs):
-    ''''All 3x3 matrices are padded with an additional row and column from the Identity Matrix
-        All the 1x3 matrices are'''
+    """'All 3x3 matrices are padded with an additional row and column from the Identity Matrix
+        All the 1x3 matrices are"""
     c = np.eye(4)
 
     for t in tfs:
         if not isinstance(t, np.ndarray):
             raise ValueError('Transformations must be numpy.ndarray.')
 
-        if t.shape == (3, 3):
-            c = c @ np.block([[t, np.zeros([3, 1])],
+        if t.shape == (4, 4):
+            pass
+        elif t.shape == (3, 3):
+            t = np.block([[t, np.zeros([3, 1])],
                               [np.zeros([1, 3]), np.ones([1, 1])]])
         elif t.shape == (1, 3):
-            c = c @ np.block([[np.eye(3), np.zeros([3, 1])],
+            t = np.block([[np.eye(3), np.zeros([3, 1])],
                               [t, np.ones([1, 1])]])
         else:
             raise ValueError(f'Shape {t.shape} not allowed.')
+
+        c = c @ t
 
     return c
 

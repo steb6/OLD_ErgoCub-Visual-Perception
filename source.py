@@ -6,6 +6,7 @@ from queue import Empty
 from multiprocessing.managers import BaseManager, RemoteError
 from typing import Dict, Union
 
+import mediapipe.calculators.image.bilateral_filter_calculator_pb2
 import cv2
 import numpy as np
 import pyrealsense2 as rs
@@ -31,7 +32,7 @@ logger.level('ERROR', color='<fg #ed254e>')
 def main():
     set_name('Source')
 
-    processes: Dict[str, Union[Queue, None]] = {'grasping': None, 'human': None}
+    processes: Dict[str, Union[Queue, None]] = {'grasping': None}
 
     BaseManager.register('get_queue')
     manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
@@ -40,14 +41,14 @@ def main():
     for proc in processes:
         processes[proc] = manager.get_queue(proc)
 
-
-    camera = RealSense(color_format=rs.format.rgb8, fps=60)
+    file = 'assets/test_640.bag'
+    camera = RealSense(color_format=rs.format.rgb8, fps=30, from_file=file)
     logger.info('Streaming to the connected processes...')
 
     # fps1 = 0
     # fps2 = 0
-    # i = 1
-    debug = False
+    i = 0
+    debug = True
     while True:
         try:
 
@@ -70,13 +71,16 @@ def main():
                 if k == ord('d'):
                     debug = not debug
                     logger.info(f'Debugging {"on" if debug else "off"}')
-        except RuntimeError:
+                i += 1
+        except RuntimeError as e:
+            i = 0
             logger.error("Realsense: frame didn't arrive")
+            # raise e
             # ctx = rs.context()
             # devices = ctx.query_devices()
             # for dev in devices:
             #     dev.hardware_reset()
-            camera = RealSense(color_format=rs.format.rgb8, fps=60)
+            camera = RealSense(color_format=rs.format.rgb8, fps=30, from_file=file)
 
 
 def set_name(name):
@@ -113,11 +117,11 @@ def register(manager, processes):
 
 
 def send(queue, data):
-    if not queue.empty():
-        try:
-            queue.get(block=False)
-        except Empty:
-            pass
+    # if not queue.empty():
+    #     try:
+    #         queue.get(block=False)
+    #     except Empty:
+    #         pass
     queue.put(data)
 
 

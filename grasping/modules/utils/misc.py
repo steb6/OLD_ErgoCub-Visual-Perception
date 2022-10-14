@@ -2,10 +2,15 @@ import copy
 
 import cv2
 import numpy as np
-from open3d.cpu.pybind.geometry import PointCloud
-from open3d.cpu.pybind.utility import Vector3dVector
-from open3d.cpu.pybind.visualization import draw_geometries
 
+try:
+    from open3d.cuda.pybind.geometry import PointCloud
+    from open3d.cuda.pybind.utility import Vector3dVector
+    from open3d.cuda.pybind.visualization import draw_geometries
+except ImportError:
+    from open3d.cpu.pybind.geometry import PointCloud
+    from open3d.cpu.pybind.utility import Vector3dVector
+    from open3d.cpu.pybind.visualization import draw_geometries
 
 def draw_pcs(*pcs):
     res = []

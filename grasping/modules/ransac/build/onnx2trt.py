@@ -5,15 +5,15 @@ import numpy as np
 
 if __name__ == '__main__':
 
-    onnx_file = './ransac/assets/ransac.onnx'
-    engine_file = './ransac/assets/ransac_5000.engine'
+    onnx_file = 'grasping/modules/ransac/assets/ransac.onnx'
+    engine_file = 'grasping/modules/ransac/assets/ransac_5000_docker.engine'
 
     # data_loader = DataLoader(iterations=100,
     #                          val_range=(-0.5, 0.5),
     #                          input_metadata=TensorMetadata.from_feed_dict({'input': np.zeros([1, 3, 192, 256], dtype=np.float32)}))
 
     # config = CreateConfig(fp16=True, tf32=True)
-    config = CreateConfig(fp16=True, tf32=True, max_workspace_size=200 << 20)
+    config = CreateConfig(fp16=True, tf32=True, max_workspace_size=10000 << 40)
 
     build_engine = EngineFromNetwork(NetworkFromOnnxPath(onnx_file), config=config)
     engine = build_engine()
