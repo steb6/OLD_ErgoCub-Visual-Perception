@@ -7,11 +7,11 @@ def main():
     ransac = BuildRansac()
 
     it = 5000
-    points = torch.tensor(np.load('./ransac/assets/test_pcd.npy'))
+    points = torch.tensor(np.load('grasping/modules/ransac/assets/test_pcd.npy'))
     idx = torch.randint(0, points.shape[0], size=[it * 3])
     subsets = points[idx].reshape(it, 3, 3)
 
-    torch.onnx.export(ransac, (points, subsets, 0.005), './ransac/assets/ransac.onnx', input_names=['points', 'subsets', 'eps'],
+    torch.onnx.export(ransac, (points, subsets, 0.005), 'grasping/modules/ransac/assets/ransac.onnx', input_names=['points', 'subsets', 'eps'],
                       output_names=[f'plane'], opset_version=11)
 
 # Actual code that gets compiled into TRT

@@ -11,17 +11,17 @@ from polygraphy.backend.trt import EngineFromNetwork, NetworkFromOnnxPath, TrtRu
 from polygraphy.common import TensorMetadata
 from polygraphy.comparator import Comparator
 import numpy as np
-import onnxruntime as ort
+# import onnxruntime as ort
 import torchvision.transforms as T
 from torchvision.transforms import InterpolationMode
 import tensorrt as trt
 
 
 def main():
-    onnx_file = './segmentation/tensorrt/assets/seg_test.onnx'
-    engine_file = './segmentation/tensorrt/assets/seg_linux.engine'
+    onnx_file = 'grasping/modules/segmentation/tensorrt/assets/seg_test.onnx'
+    engine_file = 'grasping/modules/segmentation/tensorrt/assets/seg_fp16_docker.engine'
 
-    dataloader = DataLoader(iterations=22)
+    # dataloader = DataLoader(iterations=22)
     config = CreateConfig(fp16=True, tf32=True) # , int8=True, calibrator=Calibrator(dataloader)
 
     build_engine = EngineFromNetwork(NetworkFromOnnxPath(onnx_file), config=config)

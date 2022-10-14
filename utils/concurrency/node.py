@@ -41,7 +41,7 @@ class Node(Process, ABC):
         self.blocking = blocking
 
         BaseManager.register('get_queue')
-        self.manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
+        self.manager = BaseManager(address=("host.docker.internal", 50000), authkey=b'abracadabra')
         self.manager.connect()
         self._in_queue = self.manager.get_queue(self.name)
 
