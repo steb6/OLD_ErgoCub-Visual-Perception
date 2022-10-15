@@ -43,7 +43,9 @@ class Runner:
 
         # store
         self.stream = cuda.Stream()
+
         self.context = engine.create_execution_context()
+
         self.engine = engine
 
         self.inputs = inputs

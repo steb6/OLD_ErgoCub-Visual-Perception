@@ -35,6 +35,8 @@ class Human(Node):
         self.grasping_queue = None
         self.box_center = None
         self.last_box_position = None
+        cv2.namedWindow("Ergocub-Visual-Perception")  # Create a named window
+        cv2.moveWindow("Ergocub-Visual-Perception", 40, 30)  # Move it to (40,30)
 
     def startup(self):
         # Load modules
@@ -135,7 +137,7 @@ class Human(Node):
                                       }
 
         # # Compute fps
-        end = time.time()
+        end = time.perf_counter()
         self.fps_s.append(1. / (end - start) if (end - start) != 0 else 0)
         fps_s = self.fps_s[-10:]
         fps = sum(fps_s) / len(fps_s)
@@ -174,7 +176,7 @@ class Human(Node):
         img = cv2.putText(img, "Focus: {}".format(focus) if focus is not None else "",
                           (420, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
                           cv2.LINE_AA)
-        cv2.imshow("", img)
+        cv2.imshow("Ergocub-Visual-Perception", img)
         cv2.waitKey(1)
 
         return elements

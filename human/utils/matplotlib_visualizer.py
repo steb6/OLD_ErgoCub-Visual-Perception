@@ -35,6 +35,8 @@ class MPLPosePrinter:
                     a = p[edge[0]]
                     b = p[edge[1]]
                     self.ax.plot([a[0], b[0]], [a[1], b[1]], [a[2], b[2]], color)
+
+    def draw(self):
         plt.draw()
 
     def clear(self):

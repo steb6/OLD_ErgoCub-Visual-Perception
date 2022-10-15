@@ -16,19 +16,19 @@ except ImportError:
 
 from ..configs import DataConfig, ModelConfig, TrainConfig, EvalConfig
 
-from torchmetrics import Accuracy, Precision, Recall, F1Score, MeanMetric
+# from torchmetrics import Accuracy, Precision, Recall, F1Score, MeanMetric
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from ..datasets.BoxNetPOVDepth import BoxNet as Dataset
 
 from ..utils.misc import create_3d_grid, check_mesh_contains, sample_point_cloud
 import open3d as o3d
-import pytorch_lightning as pl
-import wandb
+# import pytorch_lightning as pl
+# import wandb
 
 
 
-class PCRNetwork(pl.LightningModule, ABC):
+class PCRNetwork(ABC): # pl.LightningModule,
 
     def __init__(self, config):
         super().__init__()
@@ -40,12 +40,12 @@ class PCRNetwork(pl.LightningModule, ABC):
             if len(parameter.size()) > 2:
                 torch.nn.init.xavier_uniform_(parameter)
 
-        self.accuracy = Accuracy()
-        self.precision_ = Precision()
-        self.recall = Recall()
-        self.f1 = F1Score()
-        self.avg_loss = MeanMetric()
-        self.avg_chamfer = MeanMetric()
+        # self.accuracy = Accuracy()
+        # self.precision_ = Precision()
+        # self.recall = Recall()
+        # self.f1 = F1Score()
+        # self.avg_loss = MeanMetric()
+        # self.avg_chamfer = MeanMetric()
 
         self.training_set, self.valid_set = None, None
 

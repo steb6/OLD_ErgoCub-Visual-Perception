@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import open3d as o3d
 import pyrealsense2 as rs
 
 
@@ -52,6 +51,9 @@ class RealSense:
             for option in device.get_supported_options():
                 configs['options'][device.name][str(option)[7:]] = str(device.get_option(option))
 
+        # if postprocessing:
+        #     self.decimate = rs.decimation_filter(2)
+
         self.configs = configs
         self.align = rs.align(rs.stream.color)
 
@@ -60,6 +62,10 @@ class RealSense:
 
     def read(self):
         frames = self.pipeline.wait_for_frames(100)
+
+        # if postprocessing:
+        #     frames = self.decimate.process(frames).as_frameset()
+
         aligned_frames = self.align.process(frames)
 
         depth_frame = aligned_frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
@@ -74,6 +80,7 @@ class RealSense:
 
     @classmethod
     def rgb_pointcloud(cls, depth_image, rgb_image, intrinsics=None):
+        import open3d as o3d
         depth_image = o3d.geometry.Image(depth_image)
         rgb_image = o3d.geometry.Image(rgb_image)
         rgbd = o3d.geometry.RGBDImage().create_from_color_and_depth(rgb_image, depth_image,
@@ -97,6 +104,7 @@ class RealSense:
 
     @classmethod
     def depth_pointcloud(cls, depth_image, intrinsics=None):
+        import open3d as o3d
         depth_image = o3d.geometry.Image(depth_image)
 
         if intrinsics is None:
