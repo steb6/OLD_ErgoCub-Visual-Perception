@@ -1,4 +1,3 @@
-# import pycuda.autoinit
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +19,7 @@ class HostDeviceMem(object):
 
 class TRTRunner:
     def __init__(self, engine_path):
-        logger.info(f'Loading {Path(engine_path).name} engine...')
+        logger.info(f'Loading {Path(engine_path).stem} engine...')
 
         G_LOGGER = trt.Logger(trt.Logger.ERROR)
         trt.init_libnvinfer_plugins(G_LOGGER, '')
@@ -47,6 +46,7 @@ class TRTRunner:
 
         # store
         self.stream = cuda.Stream()
+        self.context = None
         self.context = engine.create_execution_context()
         self.engine = engine
 
@@ -54,7 +54,12 @@ class TRTRunner:
         self.outputs = outputs
         self.bindings = bindings
 
-        logger.success(f'{Path(engine_path).name} engine loaded')
+        self.warmup()
+        logger.success(f'{Path(engine_path).stem} engine loaded')
+
+    def warmup(self):
+        args = [np.random.rand(*inp.host.shape) for inp in self.inputs]
+        self(*args)
 
     def __call__(self, *args):
 

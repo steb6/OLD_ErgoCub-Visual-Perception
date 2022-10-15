@@ -3,24 +3,19 @@ import time
 
 import cv2
 import numpy as np
-# from scipy.spatial.distance import cdist
 from scipy.spatial.transform import Rotation
-
-from grasping.modules.ransac.build.test import test
-# from sklearn.neighbors import NearestNeighbors
-
-# from grasping.modules.tracking.icp import icp
 from grasping.modules.utils.input import RealSense
-from grasping.modules.utils.misc import draw_mask
+from grasping.modules.utils.misc import draw_mask, compose
 from gui.misc import project_pc, project_hands
 from utils.concurrency import Node
 
 from utils.logging import get_logger
+import tensorrt as trt
+# https://github.com/NVIDIA/TensorRT/issues/1945
+import torch
 import pycuda.autoinit
 from grasping.modules.denoising.src.denoiser import Denoising
-from grasping.modules.ransac.utils.inference import TRTRunner as Runner
-from grasping.modules.shape_reconstruction.tensorrt.utils.inference import TRTRunner as InferPcr
-from grasping.modules.segmentation.tensorrt.utils.inference import TRTRunner as InferSeg
+from grasping.modules.utils.inference import TRTRunner
 from grasping.modules.seg_pcr_ge.delete import GraspEstimator
 from grasping.modules.shape_reconstruction.tensorrt.utils.decoder import Decoder
 
@@ -30,27 +25,34 @@ logger = get_logger(True)
 class Grasping(Node):
     def __init__(self):
         super().__init__(name='grasping')
+        self.denoising = None
+        self.grasp_estimator = None
+        self.decoder = None
+        self.ransac = None
+        self.model = None
+        self.backbone = None
 
     def startup(self):
 
-        self.backbone = InferPcr('grasping/modules/shape_reconstruction/tensorrt/assets/pcr_docker.engine')
+        self.model = compose(
+            TRTRunner('./grasping/modules/segmentation/tensorrt/assets/seg_fp16_docker.engine'),
+            lambda res: res[0].reshape(192, 256, 1)
+        )
 
+        self.denoising = Denoising()
 
-        logger.info('Loading segmentation engine...')
-        self.model = InferSeg('./grasping/modules/segmentation/tensorrt/assets/seg_fp16_docker.engine')
-        logger.success('Segmentation engine loaded')
-
-        logger.info('Loading RANSAC engine...')
-        self.ransac = Runner('./grasping/modules/ransac/assets/ransac_5000_docker.engine')
-        logger.success('RANSAC engine loaded')
-
-        from grasping.modules.ransac.utils.inference import TRTRunner
-        # test(self.ransac)
+        self.backbone = compose(
+            TRTRunner('grasping/modules/shape_reconstruction/tensorrt/assets/pcr_docker.engine'),
+            lambda res: res[1:],
+            lambda weights: [torch.tensor(w).cuda().unsqueeze(0) for w in weights],
+            lambda weights: [[weights[i], weights[i + 1], weights[i + 2]] for i in range(0, 12, 3)]
+        )
 
         self.decoder = Decoder()
 
+        self.ransac = TRTRunner('./grasping/modules/ransac/assets/ransac_5000_docker.engine')
+
         self.grasp_estimator = GraspEstimator(self.ransac)
-        self.denoising = Denoising()
 
         self._out_queues['human'] = self.manager.get_queue('grasping_human')
         self._out_queues['visualizer'] = self.manager.get_queue('grasping_visualizer')
@@ -62,8 +64,6 @@ class Grasping(Node):
         self.reconstruction = None
         self.prev_partial = None
         self.prev_denormalize = None
-
-        # test(self.ransac)
 
     def loop(self, data):
         # Outputs Standard Values

@@ -58,7 +58,7 @@ class Node(Process, ABC):
 
         # self._send_all(data)
 
-        logger.info('Start up complete.')
+        logger.success('Start up complete.')
 
     def _shutdown(self, data):
         logger.info('Shutting down...')

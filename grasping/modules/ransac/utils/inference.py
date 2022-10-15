@@ -16,7 +16,7 @@ class HostDeviceMem(object):
         return self.__str__()
 
 
-class TRTRunner:
+class Runner:
     def __init__(self, engine):
         logger.info('Loading RANSAC engine...')
 
