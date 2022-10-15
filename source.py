@@ -27,7 +27,7 @@ logger.level('WARNING', color='<fg #fd811e>')
 logger.level('ERROR', color='<fg #ed254e>')
 
 
-@logger.catch
+@logger.catch(reraise=True)
 def main():
     set_name('Source')
 
