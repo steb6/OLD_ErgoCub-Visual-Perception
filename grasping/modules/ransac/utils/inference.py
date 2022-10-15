@@ -2,6 +2,7 @@
 import numpy as np
 import tensorrt as trt
 import pycuda.driver as cuda
+from loguru import logger
 
 class HostDeviceMem(object):
     def __init__(self, host_mem, device_mem):
@@ -15,10 +16,11 @@ class HostDeviceMem(object):
         return self.__str__()
 
 
-class Runner:
+class TRTRunner:
     def __init__(self, engine):
-        print(f'Loading engine: {engine}')
-        G_LOGGER = trt.Logger(trt.Logger.INFO)
+        logger.info('Loading RANSAC engine...')
+
+        G_LOGGER = trt.Logger(trt.Logger.ERROR)
         trt.init_libnvinfer_plugins(G_LOGGER, '')
         runtime = trt.Runtime(G_LOGGER)
 
@@ -43,16 +45,14 @@ class Runner:
 
         # store
         self.stream = cuda.Stream()
-
         self.context = engine.create_execution_context()
-
         self.engine = engine
 
         self.inputs = inputs
         self.outputs = outputs
         self.bindings = bindings
 
-        print(f'Engine {engine} loaded')
+        logger.success('RANSAC engine loaded')
 
     def __call__(self, *args):
 

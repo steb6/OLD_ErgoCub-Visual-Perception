@@ -2,6 +2,7 @@
 import numpy as np
 import tensorrt as trt
 import pycuda.driver as cuda
+from loguru import logger
 
 class HostDeviceMem(object):
     def __init__(self, host_mem, device_mem):
@@ -15,9 +16,11 @@ class HostDeviceMem(object):
         return self.__str__()
 
 
-class Infer:
+class TRTRunner:
     def __init__(self, engine):
-        G_LOGGER = trt.Logger(trt.Logger.INFO)
+        logger.info('Loading Shape Reconstruction engine...')
+
+        G_LOGGER = trt.Logger(trt.Logger.ERROR)
         trt.init_libnvinfer_plugins(G_LOGGER, '')
         runtime = trt.Runtime(G_LOGGER)
 
@@ -49,10 +52,17 @@ class Infer:
         self.outputs = outputs
         self.bindings = bindings
 
-    def __call__(self, pc):
+        logger.success('Shape Reconstruction engine loaded')
 
-        pc = pc.astype(trt.nptype(trt.float32)).ravel()
-        np.copyto(self.inputs[0].host, pc)
+    def __call__(self, *args):
+
+        for i, x in enumerate(args):
+            if isinstance(x, np.ndarray):
+                x = x.astype(trt.nptype(trt.float32)).ravel()
+            np.copyto(self.inputs[i].host, x)
+
+        # pc = pc.astype(trt.nptype(trt.float32)).ravel()
+        # np.copyto(self.inputs[0].host, pc)
 
         [cuda.memcpy_htod_async(inp.device, inp.host, self.stream) for inp in self.inputs]
         self.context.execute_async_v2(bindings=self.bindings, stream_handle=self.stream.handle)

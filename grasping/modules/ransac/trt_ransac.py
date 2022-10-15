@@ -2,8 +2,6 @@ import copy
 
 import numpy as np
 
-from grasping.modules.ransac.utils.inference import Runner
-
 
 # This class starts the trt engine and run it 6 times to extract
 # all of the cube faces

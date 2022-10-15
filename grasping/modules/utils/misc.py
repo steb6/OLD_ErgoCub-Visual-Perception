@@ -1,4 +1,5 @@
 import copy
+from functools import reduce
 
 import cv2
 import numpy as np
@@ -33,3 +34,11 @@ def draw_mask(rgb, mask):
 
     return res1
     # return cv2.cvtColor(res1, cv2.COLOR_RGB2BGR) #, cv2.cvtColor(res2, cv2.COLOR_RGB2BGR)
+
+
+def compose(*func):
+    def aux_compose(f, g):
+        return lambda x: f(g(x))
+    func = list(func)
+    func.reverse()
+    return reduce(aux_compose, func, lambda x: x)

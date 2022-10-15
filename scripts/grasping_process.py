@@ -1,10 +1,8 @@
 import copy
-import sys
 import time
 
 import cv2
 import numpy as np
-from loguru import logger
 # from scipy.spatial.distance import cdist
 from scipy.spatial.transform import Rotation
 
@@ -17,17 +15,16 @@ from grasping.modules.utils.misc import draw_mask
 from gui.misc import project_pc, project_hands
 from utils.concurrency import Node
 
-logger.remove()
-logger.add(sys.stdout,
-           format="<fg #b28774>{time:YYYY-MM-DD HH:mm:ss:SSS ZZ}</> <yellow>|</>"
-                  " <lvl>{level: <8}</> "
-                  "<yellow>|</> <blue>{process.name: ^12}</> <yellow>-</> <lvl>{message}</>",
-           diagnose=True)
+from utils.logging import get_logger
+import pycuda.autoinit
+from grasping.modules.denoising.src.denoiser import Denoising
+from grasping.modules.ransac.utils.inference import TRTRunner as Runner
+from grasping.modules.shape_reconstruction.tensorrt.utils.inference import TRTRunner as InferPcr
+from grasping.modules.segmentation.tensorrt.utils.inference import TRTRunner as InferSeg
+from grasping.modules.seg_pcr_ge.delete import GraspEstimator
+from grasping.modules.shape_reconstruction.tensorrt.utils.decoder import Decoder
 
-logger.level('INFO', color='<fg #fef5ed>')
-logger.level('SUCCESS', color='<fg #79d70f>')
-logger.level('WARNING', color='<fg #fd811e>')
-logger.level('ERROR', color='<fg #ed254e>')
+logger = get_logger(True)
 
 
 class Grasping(Node):
@@ -35,34 +32,20 @@ class Grasping(Node):
         super().__init__(name='grasping')
 
     def startup(self):
-        import pycuda.autoinit
-        import torch
-        from grasping.modules.denoising.src.denoiser import Denoising
-        from grasping.modules.ransac.utils.inference import Runner
-        from grasping.modules.shape_reconstruction.tensorrt.utils.inference import Infer as InferPcr
 
-        a = torch.zeros([1]).to('cuda')
-        logger.info('Loading Shape Reconstruction engine')
         self.backbone = InferPcr('grasping/modules/shape_reconstruction/tensorrt/assets/pcr_docker.engine')
-        logger.success('Shape Reconstruction engine loaded')
 
-        from grasping.modules.segmentation.tensorrt.utils.inference import Infer as InferSeg
 
-        logger.info('Loading segmentation engine')
+        logger.info('Loading segmentation engine...')
         self.model = InferSeg('./grasping/modules/segmentation/tensorrt/assets/seg_fp16_docker.engine')
         logger.success('Segmentation engine loaded')
 
-        from grasping.modules.seg_pcr_ge.delete import GraspEstimator
-        # from ransac.utils.grasp_estimator import GraspEstimator
-
-        logger.info('Loading RANSAC engine')
+        logger.info('Loading RANSAC engine...')
         self.ransac = Runner('./grasping/modules/ransac/assets/ransac_5000_docker.engine')
         logger.success('RANSAC engine loaded')
 
-        print('Test 1')
-        test(self.ransac)
-
-        from grasping.modules.shape_reconstruction.tensorrt.utils.decoder import Decoder
+        from grasping.modules.ransac.utils.inference import TRTRunner
+        # test(self.ransac)
 
         self.decoder = Decoder()
 
@@ -80,8 +63,7 @@ class Grasping(Node):
         self.prev_partial = None
         self.prev_denormalize = None
 
-        print('Test 2')
-        test(self.ransac)
+        # test(self.ransac)
 
     def loop(self, data):
         # Outputs Standard Values

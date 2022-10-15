@@ -1,54 +1,13 @@
 import os
-from pathlib import Path
+import signal
 from subprocess import Popen
 
-from utils.confort import BaseConfig, init
-
-
-class Config(BaseConfig):
-    class Docker:
-        process = False
-
-        docker_env = 'ecub-env'
-        docker_options = ['-it', '--rm', '--gpus=all']
-        volumes = [f'{Path(os.getcwd()).as_posix()}:/home/ecub']
-
-        docker_run = f'docker run {" ".join(docker_options)} -v {" -v ".join(volumes)} {docker_env}'
-        run = lambda x, cmd=docker_run: Popen(cmd.split(' ') + ['python', x])
-
-    class Manager:
-        process = True
-        docker = False
-
-        file = 'manager.py'
-
-    class Source:
-        process = True
-        docker = False
-
-        file = 'source.py'
-
-    class Grasping:
-        process = True
-        docker = True
-
-        file = 'grasping/grasping_process.py'
-
-    class Action:
-        process = True
-        docker = True
-
-        file = 'human/human_process.py'
-
-    class Sink:
-        process = True
-        docker = False
-
-        file = 'sink.py'
+from configs.config import Config
 
 
 class Shell:
     def __init__(self, type='cmd'):
+        self.process = None
         self.type = type
         self.cmds = []
 
@@ -57,7 +16,7 @@ class Shell:
 
     def start(self):
         cmd = ''
-        for i in range((len(self.cmds) -1) // 4 + 1):
+        for i in range((len(self.cmds) - 1) // 4 + 1):
             cmd += 'wt -M' if i == 0 else ';'
 
             if len(self.cmds) >= (i * 4) + 1:
@@ -75,10 +34,25 @@ class Shell:
 
 if __name__ == '__main__':
     shell = Shell('cmd')
-    for c in Config:
-        if c.process:
-            cmd = f'python {c.file}'
-            if c.docker:
-                cmd = f'{Config.Docker.docker_run} {cmd}'
-            shell.add_pane(cmd)
+
+    python_procs = [p for p in Config if p.run_process and not p.docker]
+    docker_procs = [p for p in Config if p.run_process and p.docker]
+
+    for pr in python_procs:
+        cmd = f'python {pr.file}'
+        shell.add_pane(cmd)
+
+    for pr in docker_procs:
+        docker = pr.Docker
+        cmd = f'docker run --name {docker.name}' \
+              f' {" ".join(docker.options)}' \
+              f' -v {" -v ".join(docker.volumes)}' \
+              f' {docker.image} python {pr.file}'
+        shell.add_pane(cmd)
+
     shell.start()
+
+    print('Press any key to kill the containers')
+    input()
+
+    Popen(f'docker kill'.split(' ') + [pr.Docker.name for pr in docker_procs])

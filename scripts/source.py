@@ -14,29 +14,21 @@ from utils.input import RealSense
 import sys
 from loguru import logger
 
-
-logger.remove()
-logger.add(sys.stdout,
-           format="<fg #b28774>{time:YYYY-MM-DD HH:mm:ss:SSS ZZ}</> <yellow>|</>"
-                  " <lvl>{level: <8}</> "
-                  "<yellow>|</> <blue>{process.name: ^12}</> <yellow>-</> <lvl>{message}</>",
-           diagnose=True)
-
-logger.level('INFO', color='<fg #fef5ed>')
-logger.level('SUCCESS', color='<fg #79d70f>')
-logger.level('WARNING', color='<fg #fd811e>')
-logger.level('ERROR', color='<fg #ed254e>')
-
+from utils.logging import get_logger
+logger = get_logger(True)
 
 @logger.catch(reraise=True)
 def main():
-    set_name('Source')
 
     processes: Dict[str, Union[Queue, None]] = {'grasping': None}
+
+    logger.info('Connecting to connection manager...')
 
     BaseManager.register('get_queue')
     manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
     manager.connect()
+
+    logger.success('Connected to connection manager')
 
     for proc in processes:
         processes[proc] = manager.get_queue(proc)
@@ -83,8 +75,6 @@ def main():
             camera = RealSense(color_format=rs.format.rgb8, fps=30, from_file=file)
 
 
-def set_name(name):
-    multiprocessing.current_process().name = name
 
 
 def connect(manager):
