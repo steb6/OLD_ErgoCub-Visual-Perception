@@ -157,3 +157,10 @@ def flatten(d, parent_key='', sep='.'):
         else:
             items.append((new_key, v))
     return dict(items)
+
+
+def to_class(module):
+    return type(module.__name__, (),
+                {key: staticmethod(value) if callable(value) else value
+                 for key, value in ((name, getattr(module, name))
+                                    for name in dir(module))})

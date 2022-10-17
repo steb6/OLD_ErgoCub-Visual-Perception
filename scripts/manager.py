@@ -6,7 +6,7 @@ from multiprocessing.managers import BaseManager
 from queue import Queue
 
 from utils.logging import get_logger
-from configs.config import Config
+from configs.main_config import Config
 
 Config = Config.Manager.Params
 logger = get_logger(True)

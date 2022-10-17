@@ -1,17 +1,10 @@
 import copy
-import multiprocessing
 import time
 from multiprocessing import Queue
-from queue import Empty
 from multiprocessing.managers import BaseManager, RemoteError
 from typing import Dict, Union
-
-import mediapipe.calculators.image.bilateral_filter_calculator_pb2
-import cv2
-import numpy as np
 import pyrealsense2 as rs
 from utils.input import RealSense
-import sys
 from loguru import logger
 
 from utils.logging import get_logger
@@ -58,12 +51,7 @@ def main():
                 # fps2 += 1 / (time.perf_counter() - start)
                 # print('read + send', fps2/i)
                 # i += 1
-                cv2.imshow('Input', np.zeros([100, 100, 3], dtype=np.uint8))
-                k = cv2.waitKey(1)
-                if k == ord('d'):
-                    debug = not debug
-                    logger.info(f'Debugging {"on" if debug else "off"}')
-                i += 1
+
         except RuntimeError as e:
             i = 0
             logger.error("Realsense: frame didn't arrive")

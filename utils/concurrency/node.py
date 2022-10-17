@@ -34,30 +34,24 @@ def _exception_handler(function):
 
 class Node(Process, ABC):
 
-    def __init__(self, name, blocking=True):
+    def __init__(self, ip, port, in_queue=None, out_queues=None, blocking=True):
         super(Process, self).__init__()
 
-        self.name = name
         self.blocking = blocking
 
         BaseManager.register('get_queue')
-        self.manager = BaseManager(address=("host.docker.internal", 50000), authkey=b'abracadabra')
+        self.manager = BaseManager(address=(ip, port), authkey=b'abracadabra')
         self.manager.connect()
-        self._in_queue = self.manager.get_queue(self.name)
+        self._in_queue = self.manager.get_queue(in_queue)
 
-        self._out_queues = {}
+        for k in out_queues:
+            self._out_queues = {k: self.manager.get_queue(k)}
 
     def _startup(self):
         logger.info('Starting up...')
-
         self.startup()
-
         logger.info('Waiting for source startup...')
-
         data = self._recv()
-
-        # self._send_all(data)
-
         logger.success('Start up complete.')
 
     def _shutdown(self, data):
