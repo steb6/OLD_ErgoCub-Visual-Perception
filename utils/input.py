@@ -26,7 +26,7 @@ class RealSense:
         config = rs.config()
 
         if from_file:
-            rs.config.enable_device_from_file(config, from_file, repeat_playback=True)
+            rs.config.enable_device_from_file(config, from_file, repeat_playback=False)
             self.profile = self.pipeline.start(config)
             self.profile.get_device().as_playback().set_real_time(skip_frames)  # so it doesn't drop frames
         else:

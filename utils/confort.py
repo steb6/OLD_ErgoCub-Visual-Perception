@@ -164,3 +164,14 @@ def to_class(module):
                 {key: staticmethod(value) if callable(value) else value
                  for key, value in ((name, getattr(module, name))
                                     for name in dir(module))})
+
+# def to_base_class(module):
+#     cls = to_class(module)
+#
+#     target = BaseConfig
+#     for k in dir(target):
+#         if k not in ['__class__', '__dict__']:
+#             setattr(cls, k, getattr(target, k))
+#
+#     cls._subclass()
+#     return cls

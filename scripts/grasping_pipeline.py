@@ -17,38 +17,33 @@ import tensorrt as trt
 # https://github.com/NVIDIA/TensorRT/issues/1945
 import torch
 import pycuda.autoinit
-from grasping.denoising import DbscanDenoiser
-from grasping.grasp_detection import RansacGraspDetectorTRT
-from grasping.segmentation import FcnSegmentatorTRT
-from grasping.shape_reconstruction import ConfidencePCRDecoderTRT
-from grasping.shape_reconstruction import ConfidencePCRDecoder
 
-from configs.main_config import Config
-Config = Config.Grasping
+from configs.grasping_config import Segmentation, Denoiser, ShapeCompletion, GraspDetection, Network, Logging
+
 
 logger = get_logger(True)
 
-class Watch():
-    def __init__(self):
-        self.ft = defaultdict(lambda: 0)
-    def check(self):
-        from configs import main_config
-
-        # while True:
-        for file in Path('configs').glob('*'):
-            mt = os.path.getmtime(file.as_posix())
-
-            if mt != self.ft[file.name] and self.ft[file.name] != 0:
-                reload_package(main_config)
-                from configs import main_config
-                global Config
-                Config = main_config.Config.Grasping
-                logger.success('Configuration reloaded')
-            self.ft[file.name] = mt
+# class Watch():
+#     def __init__(self):
+#         self.ft = defaultdict(lambda: 0)
+#     def check(self):
+#         from configs import grasping_config
+#
+#         # while True:
+#         for file in Path('configs').glob('*'):
+#             mt = os.path.getmtime(file.as_posix())
+#
+#             if mt != self.ft[file.name] and self.ft[file.name] != 0:
+#                 reload_package(grasping_config)
+#                 from configs import grasping_config
+#                 global Config
+#                 Config = grasping_config.Config.Grasping
+#                 logger.success('Configuration reloaded')
+#             self.ft[file.name] = mt
 
 class Grasping(Node):
     def __init__(self):
-        super().__init__(**Config.Network.to_dict())
+        super().__init__(**Network.to_dict())
         self.seg_model = None
         self.denoiser = None
         self.pcr_encoder = None
@@ -62,19 +57,19 @@ class Grasping(Node):
         self.prev_denormalize = None
 
         self.timer = Timer(window=10)
-        self.watch = Watch()
+        # self.watch = Watch()
 
     def startup(self):
 
-        self.seg_model = FcnSegmentatorTRT(**Config.Segmentation.to_dict())
-        self.denoiser = DbscanDenoiser(**Config.Denoiser.to_dict())
-        self.pcr_encoder = ConfidencePCRDecoderTRT(**Config.ShapeCompletion.Encoder.to_dict())
-        self.pcr_decoder = ConfidencePCRDecoder(**Config.ShapeCompletion.Decoder.to_dict())
-        self.grasp_detector = RansacGraspDetectorTRT(**Config.GraspDetection.to_dict())
+        self.seg_model = Segmentation.model(**Segmentation.Args.to_dict())
+        self.denoiser = Denoiser.model(**Denoiser.Args.to_dict())
+        self.pcr_encoder = ShapeCompletion.Encoder.model(**ShapeCompletion.Encoder.Args.to_dict())
+        self.pcr_decoder = ShapeCompletion.Decoder.model(**ShapeCompletion.Decoder.Args.to_dict())
+        self.grasp_detector = GraspDetection.model(**GraspDetection.Args.to_dict())
 
     @logger.catch(reraise=True)
     def loop(self, data):
-        self.watch.check()
+        # self.watch.check()
 
         output = {}
 
@@ -83,7 +78,7 @@ class Grasping(Node):
         rgb = data['rgb']
         depth = data['depth']
 
-        if Config.Logging.debug:
+        if Logging.debug:
             output['rgb'] = rgb
             output['depth'] = depth
 
@@ -95,7 +90,7 @@ class Grasping(Node):
         mask = self.seg_model(rgb)
         mask = cv2.resize(mask, dsize=(640, 480), interpolation=cv2.INTER_NEAREST)
 
-        if Config.Logging.debug:
+        if Logging.debug:
             output['mask'] = mask
 
         segmented_depth = copy.deepcopy(depth)
@@ -104,7 +99,7 @@ class Grasping(Node):
         if len(segmented_depth.nonzero()[0]) < 4096:
             logger.warning('Warning: not enough input points. Skipping reconstruction')
             output['fps'] = 1 / self.timer.compute(stop=True)
-            output = {k: v for k, v, in output.items() if k in Config.Logging.keys}
+            output = {k: v for k, v, in output.items() if k in Logging.keys}
             res = {'grasping_sink': output}
             return res
 
@@ -145,7 +140,7 @@ class Grasping(Node):
         if self.reconstruction.shape[0] >= 10_000:
             logger.warning('Corrupted reconstruction - check the input point cloud')
             output['fps'] = 1 / self.timer.compute(stop=True)
-            output = {k: v for k, v, in output.items() if k in Config.Logging.keys}
+            output = {k: v for k, v, in output.items() if k in Logging.keys}
             res = {'grasping_sink': output}
             return res
 
@@ -154,7 +149,7 @@ class Grasping(Node):
                 [self.reconstruction, np.ones([self.reconstruction.shape[0], 1])]) @ denormalize)[..., :3], axis=0
                         )[None]
 
-        if Config.Logging.debug:
+        if Logging.debug:
             output['center'] = center
 
         poses = self.grasp_detector(self.reconstruction @ flip_z)
@@ -162,17 +157,17 @@ class Grasping(Node):
         if poses is None:
             logger.warning('Corrupted reconstruction - check the input point cloud')
             output['fps'] = 1 / self.timer.compute(stop=True)
-            output = {k: v for k, v, in output.items() if k in Config.Logging.keys}
+            output = {k: v for k, v, in output.items() if k in Logging.keys}
             res = {'grasping_sink': output}
             return res
 
         hands = {'right': compose_transformations([poses[1].T, poses[0][np.newaxis] * (var * 2) + mean, R]),
                  'left': compose_transformations([poses[3].T, poses[2][np.newaxis] * (var * 2) + mean, R])}
 
-        if Config.Logging.debug:
+        if Logging.debug:
             output['hands'] = hands
 
-        if Config.Logging.debug:
+        if Logging.debug:
             o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
             output['partial'] = normalized_pc
             output['scene'] = np.concatenate([np.array(o3d_scene.points) @ R, np.array(o3d_scene.colors)], axis=1)
@@ -180,7 +175,7 @@ class Grasping(Node):
             output['transform'] = denormalize
 
         output['fps'] = 1 / self.timer.compute(stop=True)
-        output = {k: v for k, v, in output.items() if k in Config.Logging.keys}
+        output = {k: v for k, v, in output.items() if k in Logging.keys}
         res = {'grasping_sink': output}
 
         return res
