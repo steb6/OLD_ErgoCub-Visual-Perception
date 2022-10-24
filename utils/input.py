@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+# import open3d as o3d
 import pyrealsense2 as rs
 
 
@@ -9,13 +10,15 @@ import pyrealsense2 as rs
 # Realsense D435i rgb
 # intrinsics = {'fx': 612.7910766601562, 'fy': 611.8779296875, 'ppx': 321.7364196777344, 'ppy': 245.0658416748047,
 #               'width': 640, 'height': 480}
-
+HIGH_ACCURACY = 3
+HIGH_DENSITY = 4
+MEDIUM_DENSITY = 5
 
 class RealSense:
     """" rgb_res = (width, height)"""
     def __init__(self, rgb_res=(640, 480), depth_res=(640, 480), fps=60,
                  depth_format=rs.format.z16,
-                 color_format=rs.format.bgr8, from_file=None):
+                 color_format=rs.format.bgr8, from_file=None, skip_frames=True):
         self.pipeline = rs.pipeline()
         configs = {}
         configs['device'] = 'Intel RealSense D435i'
@@ -23,33 +26,27 @@ class RealSense:
         config = rs.config()
 
         if from_file:
-            rs.config.enable_device_from_file(config, from_file)
-
-        config.enable_stream(rs.stream.depth, *rgb_res, depth_format, fps)
-        config.enable_stream(rs.stream.color, *depth_res, color_format, fps)
-        self.profile = self.pipeline.start(config)
+            rs.config.enable_device_from_file(config, from_file, repeat_playback=False)
+            self.profile = self.pipeline.start(config)
+            self.profile.get_device().as_playback().set_real_time(skip_frames)  # so it doesn't drop frames
+        else:
+            config.enable_stream(rs.stream.depth, *rgb_res, depth_format, fps)
+            config.enable_stream(rs.stream.color, *depth_res, color_format, fps)
+            self.profile = self.pipeline.start(config)
+            self.profile.get_device().sensors[0].set_option(rs.option.visual_preset, HIGH_DENSITY)
 
         configs['depth'] = {'width': depth_res[0], 'height': depth_res[1], 'format': 'z16', 'fps': fps}
         configs['color'] = {'width': depth_res[0], 'height': depth_res[1], 'format': 'rgb8', 'fps': fps}
 
-
-        HIGH_ACCURACY = 3
-        HIGH_DENSITY = 4
-        MEDIUM_DENSITY = 5
-        if not from_file:
-            self.profile.get_device().sensors[0].set_option(rs.option.visual_preset, HIGH_DENSITY)
-
-        # sensors = self.profile.get_device().query_sensors()
-        # for sensor in sensors:
-        #     if sensor.supports(rs.option.auto_exposure_priority):
-        #         exp = sensor.set_option(rs.option.auto_exposure_priority, 0)
-        #         exp = sensor.get_option(rs.option.auto_exposure_priority)
 
         configs['options'] = {}
         for device in self.profile.get_device().sensors:
             configs['options'][device.name] = {}
             for option in device.get_supported_options():
                 configs['options'][device.name][str(option)[7:]] = str(device.get_option(option))
+
+        # if postprocessing:
+        #     self.decimate = rs.decimation_filter(2)
 
         self.configs = configs
         self.align = rs.align(rs.stream.color)
@@ -59,6 +56,10 @@ class RealSense:
 
     def read(self):
         frames = self.pipeline.wait_for_frames(100)
+
+        # if postprocessing:
+        #     frames = self.decimate.process(frames).as_frameset()
+
         aligned_frames = self.align.process(frames)
 
         depth_frame = aligned_frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
@@ -73,7 +74,6 @@ class RealSense:
 
     @classmethod
     def rgb_pointcloud(cls, depth_image, rgb_image, intrinsics=None):
-        import open3d as o3d
         depth_image = o3d.geometry.Image(depth_image)
         rgb_image = o3d.geometry.Image(rgb_image)
         rgbd = o3d.geometry.RGBDImage().create_from_color_and_depth(rgb_image, depth_image,
@@ -97,7 +97,6 @@ class RealSense:
 
     @classmethod
     def depth_pointcloud(cls, depth_image, intrinsics=None):
-        import open3d as o3d
         depth_image = o3d.geometry.Image(depth_image)
 
         if intrinsics is None:
