@@ -1,3 +1,4 @@
+import time
 from multiprocessing.managers import BaseManager
 
 import cv2
@@ -21,6 +22,10 @@ if __name__ == '__main__':
     q = manager.get_queue('grasping_sink')
 
     logger.info('Reading pipeline output')
+
+    # cv2.namedWindow('grasping_output', cv2.WINDOW_NORMAL)
+    # cv2.setWindowProperty('grasping_output', cv2.WND_PROP_TOPMOST, 1)
+    i = 0
     while True:
         data = q.get()
 
@@ -44,5 +49,10 @@ if __name__ == '__main__':
             img = cv2.putText(img, f'FPS: {int(data["fps"])}', (10, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
                               cv2.LINE_AA)
 
-        cv2.imshow('', img)
+        cv2.imshow('grasping_output', img)
         cv2.waitKey(1)
+
+        cv2.imwrite(f'out{i}.png', img)
+        i += 1
+
+        print()

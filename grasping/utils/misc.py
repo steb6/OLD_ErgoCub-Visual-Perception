@@ -99,7 +99,7 @@ def reload_package(package):
 
     return reload_recursive_ex(package)
 
-def plot_plane(a, b, c, d):
+def plot_plane(a, b, c, d, color=[1, 0, 0]):
     xy = (np.random.rand(1000000, 2) - 0.5) * 2
     z = - ((a * xy[..., 0] + b * xy[..., 1] + d) / c)
 
@@ -108,8 +108,7 @@ def plot_plane(a, b, c, d):
 
     plane = np.concatenate([xy, z[..., None]], axis=1)
 
-    aux = PointCloud()
-    aux.points = Vector3dVector(plane)
+    aux = PointCloud(points=Vector3dVector(plane))
     return aux
 
 def plot_line(line):

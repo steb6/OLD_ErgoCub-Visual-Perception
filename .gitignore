@@ -139,17 +139,6 @@ dmypy.json
 
 ###########################################
 .idea
-engines
-/grasping/modules/seg_pcr_ge/test0.npy
-/grasping/modules/seg_pcr_ge/test1.npy
-/grasping/modules/seg_pcr_ge/test2.npy
-/grasping/modules/seg_pcr_ge/test3.npy
-/grasping/modules/seg_pcr_ge/test4.npy
-/grasping/modules/seg_pcr_ge/test5.npy
-/grasping/modules/seg_pcr_ge/test6.npy
-/grasping/modules/seg_pcr_ge/test7.npy
-/grasping/modules/seg_pcr_ge/test8.npy
-/grasping/modules/seg_pcr_ge/test9.npy
 /grasping/modules/denoising/assets/
 /grasping/modules/ransac/assets/
 /grasping/modules/segmentation/tensorrt/assets/
@@ -158,11 +147,6 @@ engines
 /grasping/modules/segmentation/container/assets/
 /grasping/modules/shape_reconstruction/tensorrt/assets/
 /grasping/modules/shape_reconstruction/pytorch/checkpoint/
-grasping_BRUTTO
 */__pycache__
-/test/cpu_intensive.py
-/test/dest.py
-/test/src.py
-/test/test.py
 /assets/
 /test/

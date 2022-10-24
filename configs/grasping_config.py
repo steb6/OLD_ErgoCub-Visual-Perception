@@ -4,17 +4,17 @@ from pathlib import Path
 from grasping.denoising import DbscanDenoiser
 from grasping.grasp_detection import RansacGraspDetectorTRT
 from grasping.segmentation.fcn.fcn_segmentator_trt import FcnSegmentatorTRT
-from grasping.shape_reconstruction.confidence_pcr.decoder import ConfidencePCRDecoder
-from grasping.shape_reconstruction.confidence_pcr.encoder import ConfidencePCRDecoderTRT
+from grasping.shape_completion.confidence_pcr.decoder import ConfidencePCRDecoder
+from grasping.shape_completion.confidence_pcr.encoder import ConfidencePCRDecoderTRT
 from utils.confort import BaseConfig
 
 
-class Logging:
+class Logging(BaseConfig):
     log = True
     debug = True
     # key options:
     #   ['rgb', 'depth', 'mask', 'fps', 'center', 'hands', 'partial', 'scene', 'reconstruction', 'transform']
-    keys = ['rgb', 'fps', 'mask', 'hands']
+    keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
 
 
 class Network(BaseConfig):
@@ -28,7 +28,7 @@ class Segmentation(BaseConfig):
     model = FcnSegmentatorTRT
 
     class Args:
-        engine_path = './grasping/segmentation/fcn/tensorrt/assets/seg_fp16_docker.engine'
+        engine_path = './grasping/segmentation/fcn/trt/assets/seg_fp16_docker.engine'
 
 
 class Denoiser(BaseConfig):
@@ -45,7 +45,7 @@ class ShapeCompletion(BaseConfig):
         model = ConfidencePCRDecoderTRT
 
         class Args:
-            engine_path = 'grasping/shape_reconstruction/confidence_pcr/tensorrt/assets/pcr_docker.engine'
+            engine_path = 'grasping/shape_completion/confidence_pcr/trt/assets/pcr_docker.engine'
 
     class Decoder:
         model = ConfidencePCRDecoder
@@ -60,7 +60,7 @@ class GraspDetection(BaseConfig):
     model = RansacGraspDetectorTRT
 
     class Args:
-        engine_path = './grasping/grasp_detection/ransac/assets/ransac_5000_docker.engine'
+        engine_path = './grasping/grasp_detection/ransac_gd/trt/assets/ransac200_5000_docker.engine'
         # RANSAC parameters
         tolerance = 0.001
         iterations = 5000

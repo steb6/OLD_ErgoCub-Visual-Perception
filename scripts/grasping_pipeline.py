@@ -166,8 +166,9 @@ class Grasping(Node):
 
         if Logging.debug:
             output['hands'] = hands
-
-        if Logging.debug:
+            output['planes'] = poses[4]
+            output['lines'] = poses[5]
+            output['vertices'] = poses[6]
             o3d_scene = RealSense.rgb_pointcloud(depth, rgb)
             output['partial'] = normalized_pc
             output['scene'] = np.concatenate([np.array(o3d_scene.points) @ R, np.array(o3d_scene.colors)], axis=1)

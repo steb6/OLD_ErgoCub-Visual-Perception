@@ -27,16 +27,14 @@ def main():
         processes[proc] = manager.get_queue(proc)
 
     file = 'assets/test_640.bag'
-    camera = RealSense(color_format=rs.format.rgb8, fps=30, from_file=file)
+    camera = RealSense(color_format=rs.format.rgb8, fps=30, from_file=file, skip_frames=False)
     logger.info('Streaming to the connected processes...')
 
     # fps1 = 0
     # fps2 = 0
-    i = 0
     debug = True
     while True:
         try:
-
             while True:
                 start = time.perf_counter()
                 # if i==0:  # TODO REMOVE DEBUG
@@ -48,13 +46,15 @@ def main():
                 for queue in processes.values():
                     send(queue, {'rgb': copy.deepcopy(rgb), 'depth': copy.deepcopy(depth), 'debug': debug})
 
+
                 # fps2 += 1 / (time.perf_counter() - start)
                 # print('read + send', fps2/i)
-                # i += 1
+                # input()
 
         except RuntimeError as e:
             i = 0
             logger.error("Realsense: frame didn't arrive")
+            exit()
             # raise e
             # ctx = rs.context()
             # devices = ctx.query_devices()
