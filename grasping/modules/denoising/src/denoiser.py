@@ -43,6 +43,7 @@ class Denoising:
 
         logger.info('Waiting incoming connections...')
         in_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print(get_ip())
         in_sock.bind((get_ip(), 5052))
         in_sock.listen()
 

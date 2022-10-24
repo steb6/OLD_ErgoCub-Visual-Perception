@@ -27,8 +27,9 @@ def main():
     print('Connecting to process...')
     while True:
         try:  # moved this line here
+            print(get_ip())
             out_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            out_sock.connect((get_ip(), 5052))  # no longer throws error - 172.30.160.1
+            out_sock.connect((get_ip(), 5052))
             break
         except socket.error:
             pass
