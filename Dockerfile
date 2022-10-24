@@ -43,7 +43,8 @@ RUN /opt/conda/bin/pip install open3d
 RUN /opt/conda/bin/pip install --upgrade setuptools pip
 RUN /opt/conda/bin/pip install --upgrade nvidia-pyindex nvidia-tensorrt pycuda
 RUN /opt/conda/bin/pip install einops tqdm playsound pyrealsense2 vispy omegaconf scipy mediapipe timm loguru
-
+RUN /opt/conda/bin/pip install colored polygraphy --extra-index-url https://pypi.ngc.nvidia.com
+RUN /opt/conda/bin/conda install -c dglteam dgl-cuda11.3
 
 #ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/usr/local/cuda-11.3/lib:/usr/local/cuda-11.3/lib64:/usr/local/cuda-11.3/compat"
 ENV PATH="/opt/conda/bin:/opt/conda/condabin:${PATH}"
