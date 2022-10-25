@@ -5,11 +5,13 @@ from multiprocessing import process
 from multiprocessing.managers import BaseManager
 from queue import Queue
 
-from utils.logging import get_logger
-from configs.main_config import Config
+from loguru import logger
 
-Config = Config.Manager.Params
-logger = get_logger(True)
+from utils.logging import setup_logger
+from configs.sink_config import Logging, Network
+
+
+setup_logger(Logging.level)
 
 # {node: Queue(1) for node in Config.nodes}
 queues = defaultdict(lambda: Queue(1))
@@ -24,7 +26,7 @@ def main():
     logger.info('Starting communication server')
 
     BaseManager.register('get_queue', callable=get_queue)
-    m = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
+    m = BaseManager(address=(Network.ip, Network.port), authkey=b'abracadabra')
     server = m.get_server()
 
     server.stop_event = threading.Event()
