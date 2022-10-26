@@ -26,5 +26,5 @@ class Input(BaseConfig):
         fps = 30
         depth_format = rs.format.z16
         color_format = rs.format.rgb8
-        from_file = 'assets/test_640.bag'
+        # from_file = 'assets/test_640.bag'
         skip_frames = False
