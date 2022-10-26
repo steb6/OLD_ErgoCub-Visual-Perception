@@ -32,7 +32,7 @@ class Config(BaseConfig):
         file = 'scripts/grasping_pipeline.py'
 
         class Docker:
-            image = 'ecub-env'
+            image = 'ecub'
             name = 'ecub-grasping'
             options = ['-it', '--rm', '--gpus=all']
             volumes = [f'{Path(os.getcwd()).as_posix()}:/home/ecub']

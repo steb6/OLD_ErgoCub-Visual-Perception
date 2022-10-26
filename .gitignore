@@ -150,3 +150,8 @@ dmypy.json
 */__pycache__
 /assets/
 /test/
+.bash_history
+grasping/grasp_detection/ransac_gd/trt/assets/
+grasping/segmentation/fcn/trt/assets/
+grasping/shape_completion/confidence_pcr/trt/assets/
+human/engines/

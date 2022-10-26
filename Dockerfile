@@ -1,5 +1,6 @@
 # Base human Pipeline Image
 # It starts from a TensorRT container and install python, opencv, pytorch
+# docker run -it --rm --gpus=all -v "%cd%":/home/ecub ecub:latest /bin/bash
 FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
 
 ENV CONDA_VERSION "py38_4.11.0"
@@ -48,6 +49,7 @@ RUN /opt/conda/bin/conda install -c dglteam dgl-cuda11.3
 
 #ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/usr/local/cuda-11.3/lib:/usr/local/cuda-11.3/lib64:/usr/local/cuda-11.3/compat"
 ENV PATH="/opt/conda/bin:/opt/conda/condabin:${PATH}"
+ENV AM_I_IN_A_DOCKER_CONTAINER Yes
 USER ecub:ecub
 WORKDIR /home/ecub
 
