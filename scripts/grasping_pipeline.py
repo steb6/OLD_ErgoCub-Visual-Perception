@@ -1,18 +1,16 @@
 import copy
-import os
-from collections import defaultdict
-from pathlib import Path
 
 import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
+from loguru import logger
 
 from grasping.utils.input import RealSense
 from grasping.utils.misc import compose_transformations, reload_package
 from grasping.utils.avg_timer import Timer
 from utils.concurrency import Node
 
-from utils.logging import get_logger
+from utils.logging import setup_logger
 import tensorrt as trt
 # https://github.com/NVIDIA/TensorRT/issues/1945
 import torch
@@ -20,8 +18,8 @@ import pycuda.autoinit
 
 from configs.grasping_config import Segmentation, Denoiser, ShapeCompletion, GraspDetection, Network, Logging
 
+setup_logger(level=Logging.level)
 
-logger = get_logger(True)
 
 # class Watch():
 #     def __init__(self):
@@ -147,7 +145,7 @@ class Grasping(Node):
         center = np.mean(
             (np.block(
                 [self.reconstruction, np.ones([self.reconstruction.shape[0], 1])]) @ denormalize)[..., :3], axis=0
-                        )[None]
+        )[None]
 
         if Logging.debug:
             output['center'] = center

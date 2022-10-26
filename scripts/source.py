@@ -1,107 +1,37 @@
 import copy
-import time
-from multiprocessing import Queue
-from multiprocessing.managers import BaseManager, RemoteError
-from typing import Dict, Union
-import pyrealsense2 as rs
-from utils.input import RealSense
+
 from loguru import logger
 
-from utils.logging import get_logger
-logger = get_logger(True)
+from configs.source_config import Logging, Network, Input
+from utils.concurrency import SrcNode
+from utils.logging import setup_logger
+
+setup_logger(level=Logging.level)
+
 
 @logger.catch(reraise=True)
-def main():
+class Source(SrcNode):
+    def __init__(self):
+        super().__init__(**Network.to_dict())
+        self.camera = None
 
-    processes: Dict[str, Union[Queue, None]] = {'grasping': None}
+    def startup(self):
+        self.camera = Input.camera(**Input.Params.to_dict())
 
-    logger.info('Connecting to connection manager...')
+    def loop(self):
 
-    BaseManager.register('get_queue')
-    manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
-    manager.connect()
+        while True:
+            try:
+                rgb, depth = self.camera.read()
+                data = {'rgb': copy.deepcopy(rgb), 'depth': copy.deepcopy(depth)}
 
-    logger.success('Connected to connection manager')
+                return {k: data for k in Network.out_queues}
 
-    for proc in processes:
-        processes[proc] = manager.get_queue(proc)
-
-    file = 'assets/test_640.bag'
-    camera = RealSense(color_format=rs.format.rgb8, fps=30, from_file=file, skip_frames=False)
-    logger.info('Streaming to the connected processes...')
-
-    # fps1 = 0
-    # fps2 = 0
-    debug = True
-    while True:
-        try:
-            while True:
-                start = time.perf_counter()
-                # if i==0:  # TODO REMOVE DEBUG
-                rgb, depth = camera.read()
-
-                # fps1 += 1 / (time.perf_counter() - start)
-                # print('read: ', fps1 / i)
-
-                for queue in processes.values():
-                    send(queue, {'rgb': copy.deepcopy(rgb), 'depth': copy.deepcopy(depth), 'debug': debug})
-
-
-                # fps2 += 1 / (time.perf_counter() - start)
-                # print('read + send', fps2/i)
-                # input()
-
-        except RuntimeError as e:
-            i = 0
-            logger.error("Realsense: frame didn't arrive")
-            exit()
-            # raise e
-            # ctx = rs.context()
-            # devices = ctx.query_devices()
-            # for dev in devices:
-            #     dev.hardware_reset()
-            camera = RealSense(color_format=rs.format.rgb8, fps=30, from_file=file)
-
-
-
-
-def connect(manager):
-    logger.info('Connecting to manager...')
-    start = time.time()
-
-    while True:
-        try:
-            manager.connect()
-            break
-        except ConnectionRefusedError as e:
-            if time.time() - start > 120:
-                logger.error('Connection refused.')
-                raise e
-            time.sleep(1)
-    logger.success('Connected to manager.')
-
-
-def register(manager, processes):
-    for proc in list(processes):
-        BaseManager.register(proc)
-        try:
-            processes[proc] = getattr(manager, proc)()
-        except RemoteError:
-            logger.warning(f"Couldn't connect to process '{proc}'")
-            processes.pop(proc)
-
-    logger.success(f'Connected to: {",".join(list(processes))}')
-    return processes
-
-
-def send(queue, data):
-    # if not queue.empty():
-    #     try:
-    #         queue.get(block=False)
-    #     except Empty:
-    #         pass
-    queue.put(data)
+            except RuntimeError as e:
+                logger.error("Realsense: frame didn't arrive")
+                self.camera = Input.camera(**Input.Params.to_dict())
 
 
 if __name__ == '__main__':
-    main()
+    source = Source()
+    source.run()

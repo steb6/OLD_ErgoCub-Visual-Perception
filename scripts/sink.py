@@ -1,14 +1,16 @@
-import time
 from multiprocessing.managers import BaseManager
 
 import cv2
 import numpy as np
+from loguru import logger
 
 from grasping.utils.misc import draw_mask
 from gui.misc import project_pc, project_hands
-from utils.logging import get_logger
+from utils.logging import setup_logger
 
-logger = get_logger(True)
+from configs.sink_config import Logging
+
+setup_logger(level=Logging.level)
 
 if __name__ == '__main__':
     logger.info('Connecting to connection manager...')

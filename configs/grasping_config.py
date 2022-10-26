@@ -1,5 +1,4 @@
-import os
-from pathlib import Path
+from logging import INFO
 
 from grasping.denoising import DbscanDenoiser
 from grasping.grasp_detection import RansacGraspDetectorTRT
@@ -10,9 +9,9 @@ from utils.confort import BaseConfig
 
 
 class Logging(BaseConfig):
-    log = True
+    level = INFO  # Minimum logging level or list of logging levels
     debug = True
-    # key options:
+    # options:
     #   ['rgb', 'depth', 'mask', 'fps', 'center', 'hands', 'partial', 'scene', 'reconstruction', 'transform']
     keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
 
@@ -20,8 +19,10 @@ class Logging(BaseConfig):
 class Network(BaseConfig):
     ip = 'host.docker.internal'
     port = 50000
-    in_queue = 'grasping'
+    in_queue = 'source_grasping'
     out_queues = ['grasping_human', 'grasping_sink']
+    # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
+    blocking = False
 
 
 class Segmentation(BaseConfig):
