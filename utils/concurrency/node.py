@@ -71,14 +71,16 @@ class Node(Process, ABC):
     def _send_all(self, data, blocking):
         for dest in data:
 
+            msg = {}
             if not blocking:
                 while not self._out_queues[dest].empty():
                     try:
-                        self._out_queues[dest].get(block=False)
+                        msg = self._out_queues[dest].get(block=False)
                     except Empty:
                         break
 
-            self._out_queues[dest].put(data[dest], block=blocking)
+            msg.update(data[dest])
+            self._out_queues[dest].put(msg, block=blocking)
 
     def startup(self):
         pass

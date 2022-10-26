@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 
-from utils.confort import BaseConfig, to_class
-from configs.action_rec_config import ActionRec
+from utils.confort import BaseConfig
+
 
 class Config(BaseConfig):
     class Manager:
@@ -11,20 +11,11 @@ class Config(BaseConfig):
 
         file = 'scripts/manager.py'
 
-        class Params:
-            ip = 'localhost'
-            port = 50000
-            nodes = ['source', 'sink', 'grasping', 'action_rec']
-
     class Source:
         run_process = True
         docker = False
 
         file = 'scripts/source.py'
-
-        class Parameters:
-            ip = 'localhost'
-            port = 50000
 
     class Grasping:
         run_process = True
@@ -37,7 +28,16 @@ class Config(BaseConfig):
             options = ['-it', '--rm', '--gpus=all']
             volumes = [f'{Path(os.getcwd()).as_posix()}:/home/ecub']
 
-    class ActionRec(ActionRec): pass
+    class ActionRec:
+        run_process = False
+        docker = True
+        file = 'scripts/action_rec_pipeline.py'
+
+        class Docker:
+            image = 'ecub-env'
+            name = 'ecub-action_rec'
+            options = ['-it', '--rm', '--gpus=all']
+            volumes = [f'{Path(os.getcwd()).as_posix()}:/home/ecub']
 
     class Sink:
         run_process = True

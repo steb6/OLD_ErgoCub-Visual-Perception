@@ -7,8 +7,7 @@ from loguru import logger
 from grasping.utils.misc import draw_mask
 from gui.misc import project_pc, project_hands
 from utils.logging import setup_logger
-
-from configs.sink_config import Logging
+from configs.sink_config import Logging, Network
 
 setup_logger(level=Logging.level)
 
@@ -16,7 +15,7 @@ if __name__ == '__main__':
     logger.info('Connecting to connection manager...')
 
     BaseManager.register('get_queue')
-    manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
+    manager = BaseManager(address=(Network.ip, Network.port), authkey=b'abracadabra')
     manager.connect()
 
     logger.success('Connected to connection manager')
@@ -25,9 +24,6 @@ if __name__ == '__main__':
 
     logger.info('Reading pipeline output')
 
-    # cv2.namedWindow('grasping_output', cv2.WINDOW_NORMAL)
-    # cv2.setWindowProperty('grasping_output', cv2.WND_PROP_TOPMOST, 1)
-    i = 0
     while True:
         data = q.get()
 
@@ -52,9 +48,5 @@ if __name__ == '__main__':
                               cv2.LINE_AA)
 
         cv2.imshow('grasping_output', img)
+        cv2.setWindowProperty('grasping_output', cv2.WND_PROP_TOPMOST, 1)
         cv2.waitKey(1)
-
-        cv2.imwrite(f'out{i}.png', img)
-        i += 1
-
-        print()
