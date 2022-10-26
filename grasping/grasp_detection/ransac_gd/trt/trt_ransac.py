@@ -41,9 +41,7 @@ class TrTRansac:
             else:
                 inp_points = copy.deepcopy(aux_points)
 
-            logger.info('Executing ransac')
             scores, planes = self.ransac(inp_points, subsets, eps)
-            logger.info('ransac executed')
             planes = planes.reshape(iterations, 4)
 
             naninf = np.any(np.isinf(planes) | np.isnan(planes), axis=1) | np.all(planes == 0, axis=1)

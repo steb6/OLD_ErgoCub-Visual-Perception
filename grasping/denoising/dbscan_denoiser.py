@@ -1,5 +1,6 @@
 import subprocess
 
+import numpy as np
 from loguru import logger
 
 try:
@@ -13,6 +14,9 @@ class DbscanDenoiser:
     def __init__(self, eps, min_samples):
         self.eps = eps
         self.min_samples = min_samples
+
+        # warmup
+        self(np.random.randn(4096, 3))
 
     def __call__(self, input_pc):
 

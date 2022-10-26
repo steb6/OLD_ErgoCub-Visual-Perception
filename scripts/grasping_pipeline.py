@@ -18,7 +18,7 @@ import pycuda.autoinit
 
 from configs.grasping_config import Segmentation, Denoiser, ShapeCompletion, GraspDetection, Network, Logging
 
-setup_logger(level=Logging.level)
+setup_logger(**Logging.Logger.Params.to_dict())
 
 
 # class Watch():
@@ -78,7 +78,7 @@ class Grasping(Node):
             self.action = data['action']
             return {'grasping_sink': {}}
 
-        logger.info("Read camera input")
+        logger.info("Read camera input", recurring=True)
         rgb = data['rgb']
         depth = data['depth']
 
@@ -94,7 +94,7 @@ class Grasping(Node):
         mask = self.seg_model(rgb)
         mask = cv2.resize(mask, dsize=(640, 480), interpolation=cv2.INTER_NEAREST)
 
-        logger.info("RGB segmented")
+        logger.info("RGB segmented", recurring=True)
 
         if Logging.debug:
             output['mask'] = mask
@@ -104,36 +104,36 @@ class Grasping(Node):
 
         if (c1:=(self.action != 'give')) or (c2:=(len(segmented_depth.nonzero()[0]) < 4096)):
             if not c1 and c2:
-                logger.warning('Warning: not enough input points. Skipping reconstruction')
+                logger.warning('Warning: not enough input points. Skipping reconstruction', recurring=True)
             output['fps'] = 1 / self.timer.compute(stop=True)
             output = {k: v for k, v, in output.items() if k in Logging.keys}
             res = {'grasping_sink': output}
             return res
 
-        logger.info("Depth segmented")
+        logger.info("Depth segmented", recurring=True)
 
         distance = segmented_depth[segmented_depth != 0].mean()
         segmented_pc = RealSense.depth_pointcloud(segmented_depth)
 
-        logger.info("Depth to point cloud")
+        logger.info("Depth to point cloud", recurring=True)
 
         # Downsample
         idx = np.random.choice(segmented_pc.shape[0], 4096, replace=False)
         downsampled_pc = segmented_pc[idx]
 
-        logger.info("Point cloud downsampled")
+        logger.info("Point cloud downsampled", recurring=True)
 
         # Denoise
         denoised_pc = self.denoiser(downsampled_pc)
 
-        logger.info("Partial point cloud denoised")
+        logger.info("Partial point cloud denoised", recurring=True)
 
         # Fix Size
         if denoised_pc.shape[0] > 2024:
             idx = np.random.choice(denoised_pc.shape[0], 2024, replace=False)
             size_pc = denoised_pc[idx]
         else:
-            logger.warning('Info: Partial Point Cloud padded')
+            logger.warning('Info: Partial Point Cloud padded', recurring=True)
             diff = 2024 - denoised_pc.shape[0]
             pad = np.zeros([diff, 3])
             pad[:] = segmented_pc[0]
@@ -152,10 +152,10 @@ class Grasping(Node):
         fast_weights = self.pcr_encoder(normalized_pc)
         self.reconstruction = self.pcr_decoder(fast_weights)
 
-        logger.info("Computed object reconstruction")
+        logger.info("Computed object reconstruction", recurring=True)
 
         if self.reconstruction.shape[0] >= 10_000:
-            logger.warning('Corrupted reconstruction - check the input point cloud')
+            logger.warning('Corrupted reconstruction - check the input point cloud', recurring=True)
 
             output['fps'] = 1 / self.timer.compute(stop=True)
             output = {k: v for k, v, in output.items() if k in Logging.keys}
@@ -172,10 +172,10 @@ class Grasping(Node):
 
         poses = self.grasp_detector(self.reconstruction @ flip_z)
 
-        logger.info("Poses computed")
+        logger.info("Hand poses computed", recurring=True)
 
         if poses is None:
-            logger.warning('Corrupted reconstruction - check the input point cloud')
+            logger.warning('Corrupted reconstruction - check the input point cloud', recurring=True)
             output['fps'] = 1 / self.timer.compute(stop=True)
             output = {k: v for k, v, in output.items() if k in Logging.keys}
             res = {'grasping_sink': output}

@@ -8,11 +8,12 @@ from queue import Empty, Full
 
 
 def _exception_handler(function):
+    # Graceful shutdown
     def wrapper(*args):
         try:
             function(*args)
-        except:
-            logger.exception('Exception Raised')
+        except Exception as e:
+            logger.exception(e)
             exit(1)
 
     return wrapper
