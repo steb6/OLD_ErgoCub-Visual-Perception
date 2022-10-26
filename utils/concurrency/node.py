@@ -4,15 +4,16 @@ from multiprocessing import Process
 from multiprocessing.managers import BaseManager
 
 from loguru import logger
-from queue import Empty
+from queue import Empty, Full
 
 
 def _exception_handler(function):
+    # Graceful shutdown
     def wrapper(*args):
         try:
             function(*args)
-        except:
-            logger.exception('Exception Raised')
+        except Exception as e:
+            logger.exception(e)
             exit(1)
 
     return wrapper
@@ -71,14 +72,19 @@ class Node(Process, ABC):
     def _send_all(self, data, blocking):
         for dest in data:
 
+            msg = {}
             if not blocking:
                 while not self._out_queues[dest].empty():
                     try:
-                        self._out_queues[dest].get(block=False)
+                        msg = self._out_queues[dest].get(block=False)
                     except Empty:
                         break
 
-            self._out_queues[dest].put(data[dest], block=blocking)
+            msg.update(data[dest])
+            try:
+                self._out_queues[dest].put(msg, block=blocking)
+            except Full:
+                pass
 
     def startup(self):
         pass

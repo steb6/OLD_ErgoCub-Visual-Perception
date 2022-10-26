@@ -8,7 +8,6 @@ import pyrealsense2 as rs
 class Logging(BaseConfig):
     level = INFO
 
-
 class Network(BaseConfig):
     ip = 'localhost'
     port = 50000

@@ -9,10 +9,13 @@ from utils.confort import BaseConfig
 
 
 class Logging(BaseConfig):
-    level = INFO  # Minimum logging level or list of logging levels
+    class Logger:
+        class Params:
+            level = INFO  # Minimum logging level or list of logging levels
+            recurring = False
+
     debug = True
-    # options:
-    #   ['rgb', 'depth', 'mask', 'fps', 'center', 'hands', 'partial', 'scene', 'reconstruction', 'transform']
+    # options: rgb depth mask 'fps center hands partial scene reconstruction transform
     keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
 
 
