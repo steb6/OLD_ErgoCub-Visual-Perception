@@ -94,7 +94,7 @@ class Grasping(Node):
         mask = self.seg_model(rgb)
         mask = cv2.resize(mask, dsize=(640, 480), interpolation=cv2.INTER_NEAREST)
 
-        logger.info("RGB and depth segmented")
+        logger.info("RGB segmented")
 
         if Logging.debug:
             output['mask'] = mask
@@ -110,12 +110,18 @@ class Grasping(Node):
             res = {'grasping_sink': output}
             return res
 
+        logger.info("Depth segmented")
+
         distance = segmented_depth[segmented_depth != 0].mean()
         segmented_pc = RealSense.depth_pointcloud(segmented_depth)
+
+        logger.info("Depth to point cloud")
 
         # Downsample
         idx = np.random.choice(segmented_pc.shape[0], 4096, replace=False)
         downsampled_pc = segmented_pc[idx]
+
+        logger.info("Point cloud downsampled")
 
         # Denoise
         denoised_pc = self.denoiser(downsampled_pc)

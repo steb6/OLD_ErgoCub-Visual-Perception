@@ -4,7 +4,7 @@ from multiprocessing import Process
 from multiprocessing.managers import BaseManager
 
 from loguru import logger
-from queue import Empty
+from queue import Empty, Full
 
 
 def _exception_handler(function):
@@ -80,7 +80,10 @@ class Node(Process, ABC):
                         break
 
             msg.update(data[dest])
-            self._out_queues[dest].put(msg, block=blocking)
+            try:
+                self._out_queues[dest].put(msg, block=blocking)
+            except Full:
+                pass
 
     def startup(self):
         pass
