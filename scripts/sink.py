@@ -16,7 +16,12 @@ if __name__ == '__main__':
 
     BaseManager.register('get_queue')
     manager = BaseManager(address=(Network.ip, Network.port), authkey=b'abracadabra')
-    manager.connect()
+    while True:
+        try:
+            manager.connect()
+            break
+        except ConnectionRefusedError as e:
+            print(e)
 
     logger.success('Connected to connection manager')
 
