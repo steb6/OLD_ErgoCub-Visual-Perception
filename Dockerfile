@@ -46,6 +46,15 @@ RUN /opt/conda/bin/pip install einops tqdm playsound pyrealsense2 vispy omegacon
 RUN /opt/conda/bin/pip install colored polygraphy --extra-index-url https://pypi.ngc.nvidia.com
 RUN /opt/conda/bin/conda install -c dglteam dgl-cuda11.3
 
+RUN /opt/conda/bin/conda clean --all -y
+RUN /opt/conda/bin/conda update --all -y
+#RUN /opt/conda/bin/conda install -c conda-forge seaborn
+RUN /opt/conda/bin/conda install -c conda-forge -c robotology yarp=3.6.0
+
+RUN apt-get install -y --no-install-recommends dnsutils
+RUN mkdir -p /home/ecub/.config/yarp/ &&  \
+    echo "$(dig host.docker.internal +short) 10000 yarp" > /home/ecub/.config/yarp/yarp.conf
+
 #ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/usr/local/cuda-11.3/lib:/usr/local/cuda-11.3/lib64:/usr/local/cuda-11.3/compat"
 ENV PATH="/opt/conda/bin:/opt/conda/condabin:${PATH}"
 USER ecub:ecub
