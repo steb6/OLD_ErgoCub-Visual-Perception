@@ -3,14 +3,14 @@ import copy
 from loguru import logger
 
 from configs.source_config import Logging, Network, Input
-from utils.concurrency import SrcNode
+from utils.concurrency import SrcYarpNode
 from utils.logging import setup_logger
 
 setup_logger(level=Logging.level)
 
 
 @logger.catch(reraise=True)
-class Source(SrcNode):
+class Source(SrcYarpNode):
     def __init__(self):
         super().__init__(**Network.to_dict())
         self.camera = None
