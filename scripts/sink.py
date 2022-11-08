@@ -25,14 +25,18 @@ if __name__ == '__main__':
 
     logger.success('Connected to connection manager')
 
-    q = manager.get_queue('grasping_sink')
+    q = manager.get_queue('human_sink')
 
     logger.info('Reading pipeline output')
 
     while True:
         data = q.get()
 
-        if 'rgb' in data:
+        print(data.keys())
+
+        if 'img' in data.keys():
+            img = data['img']
+        elif 'rgb' in data.keys():
             img = data['rgb']
         else:
             img = np.zeros([480, 640, 3], dtype=np.uint8)
@@ -51,6 +55,8 @@ if __name__ == '__main__':
         if 'fps' in data:
             img = cv2.putText(img, f'FPS: {int(data["fps"])}', (10, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
                               cv2.LINE_AA)
+
+        if 'distance' in data:
 
         cv2.imshow('grasping_output', img)
         cv2.setWindowProperty('grasping_output', cv2.WND_PROP_TOPMOST, 1)
