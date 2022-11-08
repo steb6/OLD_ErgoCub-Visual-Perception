@@ -57,6 +57,7 @@ if __name__ == '__main__':
                               cv2.LINE_AA)
 
         if 'distance' in data:
+            pass
 
         cv2.imshow('grasping_output', img)
         cv2.setWindowProperty('grasping_output', cv2.WND_PROP_TOPMOST, 1)
