@@ -18,7 +18,7 @@ class RealSense:
     """" rgb_res = (width, height)"""
     def __init__(self, rgb_res=(640, 480), depth_res=(640, 480), fps=60,
                  depth_format=rs.format.z16,
-                 color_format=rs.format.bgr8, from_file=None, skip_frames=True):
+                 color_format=rs.format.rgb8, from_file=None, skip_frames=True):
         self.pipeline = rs.pipeline()
         configs = {}
         configs['device'] = 'Intel RealSense D435i'

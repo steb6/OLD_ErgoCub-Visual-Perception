@@ -53,7 +53,7 @@ class Grasping(Node):
 
         self.reconstruction = None
         self.prev_denormalize = None
-        self.action = None
+        self.action = {"action": "give"}
 
         self.timer = Timer(window=10)
         # self.watch = Watch()
@@ -76,9 +76,10 @@ class Grasping(Node):
         # Input
         if 'action' in data:
             self.action = data['action']
-            return {'grasping_sink': {}}
+            return {'sink': {}}
 
         logger.info("Read camera input", recurring=True)
+
         rgb = data['rgb']
         depth = data['depth']
 
@@ -107,7 +108,7 @@ class Grasping(Node):
                 logger.warning('Warning: not enough input points. Skipping reconstruction', recurring=True)
             output['fps'] = 1 / self.timer.compute(stop=True)
             output = {k: v for k, v, in output.items() if k in Logging.keys}
-            res = {'grasping_sink': output}
+            res = {'sink': output}
             return res
 
         logger.info("Depth segmented", recurring=True)
@@ -159,7 +160,7 @@ class Grasping(Node):
 
             output['fps'] = 1 / self.timer.compute(stop=True)
             output = {k: v for k, v, in output.items() if k in Logging.keys}
-            res = {'grasping_sink': output}
+            res = {'sink': output}
             return res
 
         center = np.mean(
@@ -178,7 +179,7 @@ class Grasping(Node):
             logger.warning('Corrupted reconstruction - check the input point cloud', recurring=True)
             output['fps'] = 1 / self.timer.compute(stop=True)
             output = {k: v for k, v, in output.items() if k in Logging.keys}
-            res = {'grasping_sink': output}
+            res = {'sink': output}
             return res
 
         hands = {'right': compose_transformations([poses[1].T, poses[0][np.newaxis] * (var * 2) + mean, R]),
@@ -197,7 +198,7 @@ class Grasping(Node):
 
         output['fps'] = 1 / self.timer.compute(stop=True)
         output = {k: v for k, v, in output.items() if k in Logging.keys}
-        res = {'grasping_sink': output}
+        res = {'sink': output}
 
         return res
 
