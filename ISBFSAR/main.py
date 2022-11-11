@@ -12,8 +12,8 @@ from modules.ar.ar import ActionRecognizer
 import cv2
 from playsound import playsound
 from modules.hpe.hpe import HumanPoseEstimator
-from utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig, FocusConfig
-from utils.params import TRXConfig
+from ISBFSAR.utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig, FocusConfig
+from ISBFSAR.utils.params import TRXConfig
 from multiprocessing import Process, Queue
 
 
