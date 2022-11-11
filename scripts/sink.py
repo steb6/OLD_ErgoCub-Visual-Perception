@@ -9,7 +9,7 @@ from gui.misc import project_pc, project_hands
 from utils.logging import setup_logger
 from configs.sink_config import Logging, Network
 
-setup_logger(level=Logging.level)
+setup_logger(**Logging.Logger.Params.to_dict())
 
 if __name__ == '__main__':
     logger.info('Connecting to connection manager...')
@@ -29,8 +29,10 @@ if __name__ == '__main__':
 
     logger.info('Reading pipeline output')
 
+    i = 0
     while True:
         data = q.get()
+        logger.info(f"Received output: {data.keys()}", recurring=True)
 
         if 'rgb' in data:
             img = data['rgb']
@@ -52,6 +54,11 @@ if __name__ == '__main__':
             img = cv2.putText(img, f'FPS: {int(data["fps"])}', (10, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
                               cv2.LINE_AA)
 
+        # print()
+
         cv2.imshow('grasping_output', img)
         cv2.setWindowProperty('grasping_output', cv2.WND_PROP_TOPMOST, 1)
         cv2.waitKey(1)
+
+        # cv2.imwrite(f'video/test{i}.png', img)
+        # i+=1

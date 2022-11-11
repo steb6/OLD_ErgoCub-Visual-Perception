@@ -66,7 +66,7 @@ class Grasping(Node):
         self.pcr_decoder = ShapeCompletion.Decoder.model(**ShapeCompletion.Decoder.Args.to_dict())
         self.grasp_detector = GraspDetection.model(**GraspDetection.Args.to_dict())
 
-    @logger.catch(reraise=True)
+    @logger.catch(reraise=False)
     def loop(self, data):
         # self.watch.check()
 

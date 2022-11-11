@@ -96,8 +96,6 @@ class Node(Process, ABC):
     def loop(self, data: dict) -> dict:
         pass
 
-    @_exception_handler
-    @logger.catch(reraise=True)
     def run(self) -> None:
         self._startup()
 
