@@ -17,7 +17,10 @@ class Sink(Node):
 
     def startup(self):
         logger.info('Starting up...')
-        cv2.imshow('Ergocub-Visual-Perception', np.random.rand(480, 640, 3))
+        logo = cv2.imread('assets/logo_transparent.png')
+        logo = cv2.resize(logo, (640, 480))
+        cv2.imshow('Ergocub-Visual-Perception', logo)
+        cv2.waitKey(1)
         logger.success('Start up complete.')
 
     def loop(self, data: dict) -> dict:
@@ -50,6 +53,26 @@ class Sink(Node):
         if 'focus' in data:
             img = cv2.putText(img, "FOCUS" if data["focus"] else "NOT FOCUS", (400, 20), cv2.FONT_ITALIC, 0.7,
                               (0, 255, 0) if data["focus"] else (0, 0, 255), 1, cv2.LINE_AA)
+
+        if 'pose' in data:
+            img = cv2.rectangle(img, (0, 0), (50, 50), (255, 255, 255), cv2.FILLED)
+            for point in data['pose']:
+                point = [int((p+50)*50) for p in point[:2]]
+                img = cv2.circle(img, point, 5, (0, 255, 0)).astype(np.uint8)
+
+        if 'bbox' in data:
+            x1, x2, y1, y2 = data['bbox']
+            img = cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 3)
+
+        if 'focus' in data.keys():
+            focus = data['focus']
+        else:
+            focus = False
+
+        if 'face_bbox' in data.keys():
+            x1, y1, x2, y2 = data['face_bbox']
+            color = (255, 0, 0) if not focus else (0, 255, 0)
+            img = cv2.rectangle(img, (x1, y1), (x2, y2), color, 3)
 
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 

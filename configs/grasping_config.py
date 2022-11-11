@@ -16,7 +16,7 @@ class Logging(BaseConfig):
 
     debug = True
     # options: rgb depth mask 'fps center hands partial scene reconstruction transform
-    keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
+    keys = ['hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
 
 
 class Network(BaseConfig):
