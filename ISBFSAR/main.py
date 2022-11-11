@@ -76,9 +76,13 @@ class ISBFSAR:
     def get_frame(self, img=None, log=None):
         """
         get frame, do inference, return all possible info
+        keys: img, bbox, img_preprocessed, distance, pose, edges, actions, is_true, requires_focus, focus, face_bbox,
+        fps
         """
         start = time.time()
-        elements = {}
+        elements = {"img": None, "img_preprocessed": None, "distance": None, "pose": None, "edges": None,
+                    "actions": None, "is_true": None, "requires_focus": None, "focus": None, "face_bbox": None,
+                    "fps": None}
         ar_input = {}
 
         # If img is not given (not a video), try to get img
@@ -363,4 +367,5 @@ def run_module(module, configurations, input_queue, output_queue):
 
 if __name__ == "__main__":
     master = ISBFSAR(MainConfig(), visualizer=True)
+    master.load()
     master.run()
