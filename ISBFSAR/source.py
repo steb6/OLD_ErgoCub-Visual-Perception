@@ -3,9 +3,9 @@ import multiprocessing
 from multiprocessing import Queue, Process
 from multiprocessing.managers import BaseManager
 from typing import Dict, Union
-from utils.input import RealSense
-from utils.output import VISPYVisualizer
-from utils.params import MainConfig
+from ISBFSAR.utils.input import RealSense
+from ISBFSAR.utils.output import VISPYVisualizer
+from ISBFSAR.utils.params import MainConfig
 
 
 """
@@ -20,7 +20,7 @@ Output: elements for VISPY to visualize (output_queue.send())
 if __name__ == '__main__':
     multiprocessing.current_process().name = 'Source'
 
-    processes: Dict[str, Union[Queue, None]] = {'source_human': None, 'human_sink': None}
+    processes: Dict[str, Union[Queue, None]] = {'source_human': None, 'sink': None}
 
     BaseManager.register('get_queue')
     manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
@@ -51,4 +51,4 @@ if __name__ == '__main__':
         processes['source_human'].put(elems)
 
         # Send results to visualizer
-        vispy_out_q.put(processes['human_sink'].get())
+        vispy_out_q.put(processes['sink'].get())
