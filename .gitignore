@@ -147,3 +147,4 @@ dmypy.json
 /.dgl/
 /.github/
 /.github/
+.python_history
