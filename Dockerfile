@@ -49,7 +49,7 @@ RUN /opt/conda/bin/conda install -c dglteam dgl-cuda11.3
 
 RUN /opt/conda/bin/conda clean --all -y
 RUN /opt/conda/bin/conda update --all -y
-
+#RUN /opt/conda/bin/conda install -c conda-forge seaborn
 RUN /opt/conda/bin/conda install -c conda-forge -c robotology yarp=3.6.0
 
 RUN apt-get install -y --no-install-recommends dnsutils

@@ -1,0 +1,36 @@
+.idea
+__pycache__
+
+# general
+*.mp4*
+wandb
+.bash_history
+.cache
+.python_history
+.nv
+
+## modules hpe
+#modules/hpe/modules/engines/*
+#modules/hpe/modules/numpy/*
+#modules/hpe/modules/onnxs/*
+#modules/hpe/modules/raws/*
+#modules/hpe/modules/signatured/*
+#modules/hpe/assets/*
+#modules/hpe/modules
+#
+## ar
+#modules/ar/data/*
+#modules/ar/modules/engines/*
+#modules/ar/modules/onnxs/*
+#modules/ar/modules/raws/*
+#
+## focus
+#modules/focus/focus_detection/modules
+#modules/focus/head_detection/modules
+#modules/focus/deepheadpose
+#modules/focus/modules
+#modules/focus/gaze_estimation/deepheadpose
+#modules/focus/gaze_estimation/modules
+#modules/focus/mutual_gaze/focus_detection/0.98.pth
+#modules/focus/mutual_gaze/head_detection/epoch_0.pth
+#modules/focus/gaze_estimation/pytorch_mpiigaze_demo
