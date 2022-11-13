@@ -13,5 +13,6 @@ class Logging(BaseConfig):
 class Network(BaseConfig):
     ip = 'localhost'
     port = 50000
-    in_queues = ['grasping_sink', 'action_rec_sink']
+    in_queue = 'sink'
+    out_queues = []
 

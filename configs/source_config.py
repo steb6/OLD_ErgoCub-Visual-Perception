@@ -9,7 +9,7 @@ class Logging(BaseConfig):
     class Logger:
         class Params:
             level = INFO  # Minimum logging level or list of logging levels
-            recurring = True
+            recurring = False
 
 class Network(BaseConfig):
     ip = 'localhost'

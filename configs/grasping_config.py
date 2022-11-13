@@ -12,18 +12,18 @@ class Logging(BaseConfig):
     class Logger:
         class Params:
             level = INFO  # Minimum logging level or list of logging levels
-            recurring = True
+            recurring = False
 
     debug = True
     # options: rgb depth mask 'fps center hands partial scene reconstruction transform
-    keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
+    keys = ['hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
 
 
 class Network(BaseConfig):
     ip = 'host.docker.internal'
     port = 50000
     in_queue = 'source_grasping'
-    out_queues = ['grasping_sink']
+    out_queues = ['sink']
     # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
     blocking = True
 

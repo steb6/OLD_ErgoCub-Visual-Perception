@@ -139,20 +139,12 @@ dmypy.json
 
 ###########################################
 .idea
-/grasping/modules/denoising/assets/
-/grasping/modules/ransac/assets/
-/grasping/modules/segmentation/tensorrt/assets/
-/grasping/modules/segmentation/pytorch/checkpoints/
-/grasping/modules/segmentation/pytorch/assets/
-/grasping/modules/segmentation/container/assets/
-/grasping/modules/shape_reconstruction/tensorrt/assets/
-/grasping/modules/shape_reconstruction/pytorch/checkpoint/
 */__pycache__
 /assets/
 /test/
 /.dgl/
 .bash_history
-grasping/grasp_detection/ransac_gd/trt/assets/
-grasping/segmentation/fcn/trt/assets/
-grasping/shape_completion/confidence_pcr/trt/assets/
-human/engines/
+/.dgl/
+/.github/
+/.github/
+.python_history

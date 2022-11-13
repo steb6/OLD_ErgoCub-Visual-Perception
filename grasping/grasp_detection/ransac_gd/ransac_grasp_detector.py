@@ -13,7 +13,6 @@ from .trt.trt_ransac import TrTRansac
 # In order to see the visualization correctly, one should stay in the coordinate frame, looking towards +z with +x
 # facing towards -x and +y facing towards -y
 from ...utils.misc import plot_line
-from utils.visualization import draw_geometries
 
 
 class RansacGraspDetectorTRT:
