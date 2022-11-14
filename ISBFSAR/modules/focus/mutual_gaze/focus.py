@@ -1,13 +1,13 @@
-from ISBFSAR.modules.focus.mutual_gaze.head_detection.utils.misc import get_model
-from ISBFSAR.modules.hpe.utils.misc import nms_cpu
+from modules.focus.mutual_gaze.head_detection.utils.misc import get_model
+from modules.hpe.utils.misc import nms_cpu
 import torch.optim
 import copy
 from torchvision import transforms
-from ISBFSAR.modules.focus.mutual_gaze.focus_detection.utils.model import MutualGazeDetectorHeads as Model
+from modules.focus.mutual_gaze.focus_detection.utils.model import MutualGazeDetectorHeads as Model
 import cv2
 import numpy as np
 from tqdm import tqdm
-from ISBFSAR.utils.params import MutualGazeConfig
+from utils.params import MutualGazeConfig
 
 WINDOW_SIZE = 1
 
