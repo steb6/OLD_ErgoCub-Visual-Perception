@@ -4,11 +4,11 @@ from modules.hpe.utils.misc import postprocess_yolo_output, homography, get_augm
     reconstruct_absolute
 import einops
 import numpy as np
-from utils.tensorrt_runner import Runner
-from utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig
+from ISBFSAR.utils.tensorrt_runner import Runner
+from ISBFSAR.tils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig
 from tqdm import tqdm
 import cv2
-from utils.matplotlib_visualizer import MPLPosePrinter
+from ISBFSAR.utils.matplotlib_visualizer import MPLPosePrinter
 
 
 class HumanPoseEstimator:

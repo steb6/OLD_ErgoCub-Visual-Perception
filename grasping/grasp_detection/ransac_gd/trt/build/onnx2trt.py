@@ -6,7 +6,7 @@ import numpy as np
 if __name__ == '__main__':
 
     onnx_file = 'grasping/grasp_detection/ransac_gd/trt/assets/ransac200_10000.onnx'
-    engine_file = 'grasping/grasp_detection/ransac_gd/trt/assets/ransac200_10000_windows.engine'
+    engine_file = 'grasping/grasp_detection/ransac_gd/trt/assets/ransac200_10000_docker.engine'
 
     # data_loader = DataLoader(iterations=100,
     #                          val_range=(-0.5, 0.5),

@@ -1,6 +1,6 @@
 from queue import Empty, Full
 
-import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
+# import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
 import pickle as pkl
 from multiprocessing.managers import BaseManager
 from modules.focus.gaze_estimation.focus import FocusDetector

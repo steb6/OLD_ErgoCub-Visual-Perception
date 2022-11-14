@@ -16,11 +16,11 @@ class Logging(BaseConfig):
 
     debug = True
     # options: rgb depth mask 'fps center hands partial scene reconstruction transform
-    keys = ['hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
+    keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
 
 
 class Network(BaseConfig):
-    ip = 'host.docker.internal'
+    ip = 'localhost'
     port = 50000
     in_queue = 'source_grasping'
     out_queues = ['sink']
@@ -64,7 +64,7 @@ class GraspDetection(BaseConfig):
     model = RansacGraspDetectorTRT
 
     class Args:
-        engine_path = './grasping/grasp_detection/ransac_gd/trt/assets/ransac200_5000_docker.engine'
+        engine_path = './grasping/grasp_detection/ransac_gd/trt/assets/ransac200_10000_docker.engine'
         # RANSAC parameters
         tolerance = 0.001
-        iterations = 5000
+        iterations = 10000

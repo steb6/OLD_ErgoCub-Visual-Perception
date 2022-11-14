@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 from loguru import logger
-from grasping.utils.misc import draw_mask
-from gui.misc import project_pc, project_hands
+from grasping.utils.misc import draw_mask, project_pc, project_hands
+
 from utils.concurrency import Node
 from utils.logging import setup_logger
 from configs.sink_config import Logging, Network
@@ -15,13 +15,11 @@ class Sink(Node):
     def __init__(self):
         super().__init__(**Network.to_dict())
 
-    def startup(self):
-        logger.info('Starting up...')
-        logo = cv2.imread('assets/logo_transparent.png')
-        logo = cv2.resize(logo, (640, 480))
-        cv2.imshow('Ergocub-Visual-Perception', logo)
-        cv2.waitKey(1)
-        logger.success('Start up complete.')
+    # def startup(self):
+    #     logo = cv2.imread('assets/logo_transparent.png')
+    #     logo = cv2.resize(logo, (640, 480))
+    #     cv2.imshow('Ergocub-Visual-Perception', logo)
+    #     cv2.waitKey(1)
 
     def loop(self, data: dict) -> dict:
         if 'img' in data.keys():

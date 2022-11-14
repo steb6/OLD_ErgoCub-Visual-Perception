@@ -53,7 +53,7 @@ class Grasping(Node):
 
         self.reconstruction = None
         self.prev_denormalize = None
-        self.action = {"action": "give"}
+        self.action = {"action": "none"}
 
         self.timer = Timer(window=10)
         # self.watch = Watch()
@@ -66,7 +66,6 @@ class Grasping(Node):
         self.pcr_decoder = ShapeCompletion.Decoder.model(**ShapeCompletion.Decoder.Args.to_dict())
         self.grasp_detector = GraspDetection.model(**GraspDetection.Args.to_dict())
 
-    @logger.catch(reraise=True)
     def loop(self, data):
         # self.watch.check()
 
@@ -103,6 +102,10 @@ class Grasping(Node):
         segmented_depth = copy.deepcopy(depth)
         segmented_depth[mask != 1] = 0
 
+        if len(segmented_depth.nonzero()[0]) > 4096:
+            distance = segmented_depth[segmented_depth != 0].min()
+            if distance < 600: self.action = 'give'
+
         if (c1:=(self.action != 'give')) or (c2:=(len(segmented_depth.nonzero()[0]) < 4096)):
             if not c1 and c2:
                 logger.warning('Warning: not enough input points. Skipping reconstruction', recurring=True)
@@ -113,7 +116,6 @@ class Grasping(Node):
 
         logger.info("Depth segmented", recurring=True)
 
-        distance = segmented_depth[segmented_depth != 0].mean()
         segmented_pc = RealSense.depth_pointcloud(segmented_depth)
 
         logger.info("Depth to point cloud", recurring=True)
