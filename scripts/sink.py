@@ -35,8 +35,8 @@ class Sink(Node):
         # logger.success('Start up complete.')
 
     def loop(self, data: dict) -> dict:
-        if 'img' in data.keys():
-            self.img = data['img']
+        if 'rgb' in data.keys():
+            self.img = data['rgb']
         img = self.img
 
         # GRASPING #####################################################################################################
