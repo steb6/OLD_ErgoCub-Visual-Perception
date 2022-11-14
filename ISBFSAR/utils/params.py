@@ -4,6 +4,7 @@ import os
 input_type = "skeleton"  # rgb, skeleton or hybrid
 skeleton_type = 'smpl+head_30'
 
+base_dir = "ISBFSAR"
 docker = os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False)
 seq_len = 8 if input_type != "skeleton" else 16
 ubuntu = platform.system() == "Linux"
@@ -24,12 +25,12 @@ class MainConfig(object):
 
 class MetrabsTRTConfig(object):
     def __init__(self):
-        self.yolo_engine_path = os.path.join('modules', 'hpe', 'weights', engine_dir, 'yolo.engine')
-        self.image_transformation_path = os.path.join('modules', 'hpe', 'weights', engine_dir, 'image_transformation1.engine')
-        self.bbone_engine_path = os.path.join('modules', 'hpe', 'weights', engine_dir, 'bbone1.engine')
-        self.heads_engine_path = os.path.join('modules', 'hpe', 'weights', engine_dir, 'heads1.engine')
-        self.expand_joints_path = 'assets/32_to_122.npy'
-        self.skeleton_types_path = 'assets/skeleton_types.pkl'
+        self.yolo_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'yolo.engine')
+        self.image_transformation_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'image_transformation1.engine')
+        self.bbone_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'bbone1.engine')
+        self.heads_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'heads1.engine')
+        self.expand_joints_path = os.path.join(base_dir, "assets", '32_to_122.npy')
+        self.skeleton_types_path = os.path.join(base_dir, "assets", "skeleton_types.pkl")
         self.skeleton = skeleton_type
         self.yolo_thresh = 0.3
         self.nms_thresh = 0.7
@@ -86,12 +87,13 @@ class TRXConfig(object):
 
         # DEPLOYMENT
         if input_type == "rgb":
-            self.final_ckpt_path = "modules/ar/modules/raws/rgb/3000.pth"
+            self.final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "rgb", "3000.pth")
         elif input_type == "skeleton":
-            self.final_ckpt_path = "modules/ar/modules/raws/DISC.pth"
+            self.final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "DISC.pth")
         elif input_type == "hybrid":
-            self.final_ckpt_path = "modules/ar/modules/raws/hybrid/1714_truncated_resnet.pth"
-        self.trt_path = 'modules/ar/modules/{}/trx.engine'.format(engine_dir)
+            self.final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "hybrid",
+                                                "1714_truncated_resnet.pth")
+        self.trt_path = os.path.join(base_dir, "modules", "ar", engine_dir, "trx.engine")
         self.seq_len = seq_len
 
 
@@ -109,10 +111,10 @@ class FaceDetectorConfig:
 
 class GazeEstimatorConfig:
     def __init__(self):
-        self.camera_params = 'assets/camera_params.yaml'
-        self.normalized_camera_params = 'assets/eth-xgaze.yaml'
+        self.camera_params = os.path.join(base_dir, "assets", "camera_params.yaml")
+        self.normalized_camera_params = os.path.join(base_dir, 'assets', 'eth-xgaze.yaml')
         self.normalized_camera_distance = 0.6
-        self.checkpoint = 'modules/focus/gaze_estimation/modules/raw/eth-xgaze_resnet18.pth'
+        self.checkpoint = os.path.join(base_dir, 'modules', 'focus', 'gaze_estimation', 'modules', 'raw', 'eth-xgaze_resnet18.pth')
         self.image_size = [224, 224]
 
 
@@ -129,15 +131,15 @@ class FocusConfig:
         self.dist_thr = 0.3  # when distant, roll under this thr is considered focus
         self.foc_rot_thr = 0.7  # when close, roll above this thr is considered not focus
         self.patience = 3  # result is based on the majority of previous observations
-        self.sample_params_path = "assets/sample_params.yaml"
+        self.sample_params_path = os.path.join(base_dir, "assets", "sample_params.yaml")
 
 
 class MutualGazeConfig:
     def __init__(self):
         self.data_path = 'D:/datasets/mutualGaze_dataset' if not ubuntu else "/home/IIT.LOCAL/sberti/datasets/mutualGaze_dataset"
-        self.head_model = 'modules/focus/mutual_gaze/head_detection/epoch_0.pth'
-        self.focus_model = 'modules/focus/mutual_gaze/focus_detection/checkpoints/sess_0_f1_1.00.pth'
-        self.ckpts_path = 'modules/focus/mutual_gaze/focus_detection/checkpoints'
+        self.head_model = os.path.join(base_dir, "modules", "focus", "mutual_gaze", "head_detection", "epoch_0.pth")
+        self.focus_model = os.path.join(base_dir, "modules", "focus", "mutual_gaze", "focus_detection", "checkpoints", "sess_0_f1_1.00.pth")
+        self.ckpts_path = os.path.join(base_dir, "modules", "focus", "mutual_gaze", "focus_detection", "checkpoints")
 
         self.augmentation_size = 0.8
         self.dataset = "focus_dataset_heads"

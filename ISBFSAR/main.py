@@ -1,17 +1,16 @@
 from queue import Empty, Full
-
-# import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
+import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
 import pickle as pkl
 from multiprocessing.managers import BaseManager
-from modules.focus.gaze_estimation.focus import FocusDetector
+from ISBFSAR.modules.focus.gaze_estimation.focus import FocusDetector
 # from modules.focus.mutual_gaze.focus import FocusDetector
 import os
 import numpy as np
 import time
-from modules.ar.ar import ActionRecognizer
+from ISBFSAR.modules.ar.ar import ActionRecognizer
 import cv2
-from playsound import playsound
-from modules.hpe.hpe import HumanPoseEstimator
+# from playsound import playsound
+from ISBFSAR.modules.hpe.hpe import HumanPoseEstimator
 from ISBFSAR.utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig, FocusConfig
 from ISBFSAR.utils.params import TRXConfig
 from multiprocessing import Process, Queue
@@ -43,7 +42,7 @@ class ISBFSAR:
 
         # Create communication with host
         BaseManager.register('get_queue')
-        manager = BaseManager(address=("host.docker.internal" if docker else "localhost", 50000), authkey=b'abracadabra')
+        manager = BaseManager(address=("localhost", 50000), authkey=b'abracadabra')
         manager.connect()
         self._in_queue = manager.get_queue('source_human')  # To get rgb or msg
         self._out_queue = manager.get_queue('sink')  # To send element to VISPY
@@ -83,6 +82,7 @@ class ISBFSAR:
         elements = {"img": None, "img_preprocessed": None, "distance": None, "pose": None, "edges": None,
                     "actions": None, "is_true": None, "requires_focus": None, "focus": None, "face_bbox": None,
                     "fps": None}
+
         ar_input = {}
 
         # If img is not given (not a video), try to get img
@@ -342,16 +342,16 @@ class ISBFSAR:
         return "Action " + flag + " learned successfully!"
 
     def save(self):
-        with open('assets/saved/support_set.pkl', 'wb') as outfile:
+        with open('ISBFSAR/assets/saved/support_set.pkl', 'wb') as outfile:
             pkl.dump(self.ar.support_set, outfile)
-        with open('assets/saved/requires_focus.pkl', 'wb') as outfile:
+        with open('ISBFSAR/assets/saved/requires_focus.pkl', 'wb') as outfile:
             pkl.dump(self.ar.requires_focus, outfile)
         return "Classes saved successfully in " + 'assets/saved/support_set.pkl'
 
     def load(self):
-        with open('assets/saved/support_set.pkl', 'rb') as pkl_file:
+        with open('ISBFSAR/assets/saved/support_set.pkl', 'rb') as pkl_file:
             self.ar.support_set = pkl.load(pkl_file)
-        with open('assets/saved/requires_focus.pkl', 'rb') as pkl_file:
+        with open('ISBFSAR/assets/saved/requires_focus.pkl', 'rb') as pkl_file:
             self.ar.requires_focus = pkl.load(pkl_file)
         return f"Loaded {len(self.ar.support_set)} classes"
 
