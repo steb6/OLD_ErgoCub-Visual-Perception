@@ -2,12 +2,11 @@ import cv2
 import numpy as np
 from loguru import logger
 from grasping.utils.misc import draw_mask, project_pc, project_hands
-
 from utils.concurrency import Node
 from utils.logging import setup_logger
 from configs.sink_config import Logging, Network
 
-setup_logger(**Logging.Logger.Params.to_dict())
+setup_logger(level=Logging.level)
 
 
 @logger.catch(reraise=True)
@@ -28,10 +27,12 @@ class Sink(Node):
         super().__init__(**Network.to_dict())
 
     # def startup(self):
-    #     logo = cv2.imread('assets/logo_transparent.png')
-    #     logo = cv2.resize(logo, (640, 480))
-    #     cv2.imshow('Ergocub-Visual-Perception', logo)
-    #     cv2.waitKey(1)
+        # logger.info('Starting up...')
+        # logo = cv2.imread('assets/logo_transparent.png')
+        # logo = cv2.resize(logo, (640, 480))
+        # cv2.imshow('Ergocub-Visual-Perception', logo)
+        # cv2.waitKey(1)
+        # logger.success('Start up complete.')
 
     def loop(self, data: dict) -> dict:
         if 'img' in data.keys():
@@ -76,10 +77,14 @@ class Sink(Node):
             self.pose = data["pose"]
             self.edges = data["edges"]
         if self.pose is not None:
-            img = cv2.rectangle(img, (0, 0), (100, 100), (255, 255, 255), cv2.FILLED)
+            img = cv2.rectangle(img, (0, 430), (50, 480), (255, 255, 255), cv2.FILLED)
             for edge in self.edges:
                 p0 = [int((p*50)+50) for p in self.pose[edge[0]][:2]]
                 p1 = [int((p*50)+50) for p in self.pose[edge[1]][:2]]
+                p0[1] += 405
+                p1[1] += 405
+                p0[0] += -25
+                p1[0] += -25
                 img = cv2.line(img, p0, p1, (0, 255, 0), thickness=1, lineType=cv2.LINE_AA)
 
         if 'bbox' in data:
@@ -110,7 +115,7 @@ class Sink(Node):
             if len(self.actions) > 1:
                 best = max(self.actions, key=self.actions.get)
                 if self.is_true > 0.75:
-                    img = cv2.putText(img, best, (10, 100), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1, cv2.LINE_AA)
+                    img = cv2.putText(img, best, (300, 460), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1, cv2.LINE_AA)
 
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 

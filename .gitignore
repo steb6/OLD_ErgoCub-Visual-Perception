@@ -146,3 +146,4 @@ dmypy.json
 .bash_history
 /.github/
 .python_history
+*.engine

@@ -102,7 +102,8 @@ class Grasping(Node):
 
         if len(segmented_depth.nonzero()[0]) > 4096:
             distance = segmented_depth[segmented_depth != 0].min()
-            if distance < 600: self.action = 'give'
+            if distance < 700: self.action = 'give'
+            else: self.action = 'none'
 
         if (c1:=(self.action != 'give')) or (c2:=(len(segmented_depth.nonzero()[0]) < 4096)):
             if not c1 and c2:
