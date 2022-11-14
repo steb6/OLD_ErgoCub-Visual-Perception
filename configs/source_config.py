@@ -14,9 +14,9 @@ class Logging(BaseConfig):
 class Network(BaseConfig):
     ip = 'localhost'
     port = 50000
-    out_queues = ['source_grasping']
+    out_queues = ['source_human', 'source_grasping']
     # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
-    blocking = True
+    blocking = False
 
 
 class Input(BaseConfig):
@@ -28,5 +28,5 @@ class Input(BaseConfig):
         fps = 30
         depth_format = rs.format.z16
         color_format = rs.format.rgb8
-        from_file = 'assets/robo_arena_hole_filling_640.bag'
-        skip_frames = False
+        from_file = 'assets/robot_arena_videos/tilting_camera.bag'
+        skip_frames = True
