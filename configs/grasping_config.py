@@ -20,7 +20,7 @@ class Logging(BaseConfig):
 
 
 class Network(BaseConfig):
-    ip = 'localhost'
+    ip = 'host.docker.internal'
     port = 50000
     in_queue = 'source_grasping'
     out_queues = ['sink']

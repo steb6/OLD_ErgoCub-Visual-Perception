@@ -145,7 +145,7 @@ def convert_pt(point):
 
 
 if __name__ == "__main__":
-    from utils.params import FocusConfig
+    from ISBFSAR.utils.params import FocusConfig
 
     cap = cv2.VideoCapture(0)
     # ok, img = cap.read()

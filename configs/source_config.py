@@ -23,7 +23,7 @@ class Input(BaseConfig):
         rgb_res = (640, 480)
         depth_res = (640, 480)
         fps = 30
-        depth_format = rs.format.z16
-        color_format = rs.format.rgb8
-        from_file = 'assets/robot_arena_videos/tilting_camera.bag'
+        # depth_format = rs.format.z16  # TODO MAY CAUSE PROBLEM
+        # color_format = rs.format.rgb8  # TODO MAY CAUSE PROBLEM
+        # from_file = 'assets/robot_arena_videos/tilting_camera.bag'
         skip_frames = True

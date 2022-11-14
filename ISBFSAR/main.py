@@ -42,7 +42,7 @@ class ISBFSAR:
 
         # Create communication with host
         BaseManager.register('get_queue')
-        manager = BaseManager(address=("localhost", 50000), authkey=b'abracadabra')
+        manager = BaseManager(address=("host.docker.internal", 50000), authkey=b'abracadabra')
         manager.connect()
         self._in_queue = manager.get_queue('source_human')  # To get rgb or msg
         self._out_queue = manager.get_queue('sink')  # To send element to VISPY
