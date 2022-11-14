@@ -4,7 +4,10 @@ from utils.confort import BaseConfig
 
 
 class Logging(BaseConfig):
-    level = INFO
+    class Logger:
+        class Params:
+            level = INFO  # Minimum logging level or list of logging levels
+            recurring = True
 
 
 class Network(BaseConfig):
