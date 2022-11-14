@@ -144,8 +144,6 @@ dmypy.json
 /test/
 /.dgl/
 .bash_history
-/.dgl/
-/.github/
 /.github/
 .python_history
 *.engine

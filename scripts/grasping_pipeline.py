@@ -1,16 +1,13 @@
 import copy
 from collections import defaultdict
-
 import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
 from loguru import logger
-
 from grasping.utils.input import RealSense
 from grasping.utils.misc import compose_transformations, reload_package
 from grasping.utils.avg_timer import Timer
 from utils.concurrency import Node
-
 from utils.logging import setup_logger
 import tensorrt as trt
 # https://github.com/NVIDIA/TensorRT/issues/1945

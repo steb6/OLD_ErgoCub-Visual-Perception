@@ -35,8 +35,8 @@ class Sink(Node):
         # logger.success('Start up complete.')
 
     def loop(self, data: dict) -> dict:
-        if 'rgb' in data.keys():
-            self.img = data['rgb']
+        if 'img' in data.keys():
+            self.img = data['img']
         img = self.img
 
         # GRASPING #####################################################################################################
@@ -53,7 +53,6 @@ class Sink(Node):
             self.hands = data['hands']
         if self.hands is not None:
             img = project_hands(img, self.hands['right'], self.hands['left'])
-
 
         # HUMAN ########################################################################################################
         if 'fps' in data:
