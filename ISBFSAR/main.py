@@ -81,7 +81,7 @@ class ISBFSAR:
         start = time.time()
         elements = {"img": None, "img_preprocessed": None, "distance": None, "pose": None, "edges": None,
                     "actions": None, "is_true": None, "requires_focus": None, "focus": None, "face_bbox": None,
-                    "fps": None}
+                    "fps": None, "bbox": None}
 
         ar_input = {}
 

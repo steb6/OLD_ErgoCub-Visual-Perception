@@ -67,7 +67,7 @@ class Grasping(Node):
     def loop(self, data):
         # self.watch.check()
 
-        output = defaultdict(lambda: None)
+        output = {k: None for k in Logging.keys}
 
         self.timer.start()
         # Input

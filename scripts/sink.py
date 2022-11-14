@@ -73,10 +73,10 @@ class Sink(Node):
             img = cv2.putText(img, "FOCUS" if self.focus else "NOT FOCUS", (400, 20), cv2.FONT_ITALIC, 0.7,
                               (0, 255, 0) if self.focus else (0, 0, 255), 1, cv2.LINE_AA)
 
-        if 'pose' in data:
+        if 'pose' in data and self.hands is not None:
             self.pose = data["pose"]
             self.edges = data["edges"]
-        if self.pose is not None:
+        if self.pose is not None and self.hands is None:
             img = cv2.rectangle(img, (0, 430), (50, 480), (255, 255, 255), cv2.FILLED)
             for edge in self.edges:
                 p0 = [int((p*50)+50) for p in self.pose[edge[0]][:2]]
@@ -89,7 +89,7 @@ class Sink(Node):
 
         if 'bbox' in data:
             self.bbox = data["bbox"]
-        if self.bbox is not None:
+        if self.bbox is not None and self.hands is None:
             x1, x2, y1, y2 = self.bbox
             img = cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 3)
 
@@ -111,7 +111,7 @@ class Sink(Node):
             self.actions = data["actions"]
         if 'is_true' in data.keys():
             self.is_true = data["is_true"]
-        if self.actions is not None:
+        if self.actions is not None and self.hands is None:
             if len(self.actions) > 1:
                 best = max(self.actions, key=self.actions.get)
                 if self.is_true > 0.75:
