@@ -25,7 +25,7 @@ class Network(BaseConfig):
     in_queue = 'source_grasping'
     out_queues = ['sink']
     # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
-    blocking = False
+    blocking = True
 
 
 class Segmentation(BaseConfig):

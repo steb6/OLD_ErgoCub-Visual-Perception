@@ -3,15 +3,15 @@ from queue import Empty, Full
 # import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
 import pickle as pkl
 from multiprocessing.managers import BaseManager
-from modules.focus.gaze_estimation.focus import FocusDetector
+from ISBFSAR.modules.focus.gaze_estimation.focus import FocusDetector
 # from modules.focus.mutual_gaze.focus import FocusDetector
 import os
 import numpy as np
 import time
-from modules.ar.ar import ActionRecognizer
+from ISBFSAR.modules.ar.ar import ActionRecognizer
 import cv2
 from playsound import playsound
-from modules.hpe.hpe import HumanPoseEstimator
+from ISBFSAR.modules.hpe.hpe import HumanPoseEstimator
 from ISBFSAR.utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig, FocusConfig
 from ISBFSAR.utils.params import TRXConfig
 from multiprocessing import Process, Queue

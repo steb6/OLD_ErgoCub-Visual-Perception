@@ -1,5 +1,5 @@
 import cv2
-from modules.focus.gaze_estimation.pytorch_mpiigaze_demo.ptgaze.gaze_estimator import GazeEstimator
+from ISBFSAR.modules.focus.gaze_estimation.pytorch_mpiigaze_demo.ptgaze.gaze_estimator import GazeEstimator
 from tqdm import tqdm
 from scipy.spatial.transform import Rotation
 import yaml

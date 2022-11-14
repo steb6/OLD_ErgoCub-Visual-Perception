@@ -7,7 +7,7 @@ from utils.concurrency import Node
 from utils.logging import setup_logger
 from configs.sink_config import Logging, Network
 
-setup_logger(level=Logging.level)
+setup_logger(**Logging.Logger.Params.to_dict())
 
 
 @logger.catch(reraise=True)

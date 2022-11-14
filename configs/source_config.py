@@ -6,7 +6,10 @@ import pyrealsense2 as rs
 
 
 class Logging(BaseConfig):
-    level = INFO
+    class Logger:
+        class Params:
+            level = INFO  # Minimum logging level or list of logging levels
+            recurring = False
 
 class Network(BaseConfig):
     ip = 'localhost'

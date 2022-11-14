@@ -24,12 +24,12 @@ class MainConfig(object):
 
 class MetrabsTRTConfig(object):
     def __init__(self):
-        self.yolo_engine_path = os.path.join('modules', 'hpe', 'weights', engine_dir, 'yolo.engine')
-        self.image_transformation_path = os.path.join('modules', 'hpe', 'weights', engine_dir, 'image_transformation1.engine')
-        self.bbone_engine_path = os.path.join('modules', 'hpe', 'weights', engine_dir, 'bbone1.engine')
-        self.heads_engine_path = os.path.join('modules', 'hpe', 'weights', engine_dir, 'heads1.engine')
-        self.expand_joints_path = 'assets/32_to_122.npy'
-        self.skeleton_types_path = 'assets/skeleton_types.pkl'
+        self.yolo_engine_path = os.path.join("ISBFSAR", 'modules', 'hpe', 'weights', engine_dir, 'yolo.engine')
+        self.image_transformation_path = os.path.join("ISBFSAR", 'modules', 'hpe', 'weights', engine_dir, 'image_transformation1.engine')
+        self.bbone_engine_path = os.path.join("ISBFSAR", 'modules', 'hpe', 'weights', engine_dir, 'bbone1.engine')
+        self.heads_engine_path = os.path.join("ISBFSAR", 'modules', 'hpe', 'weights', engine_dir, 'heads1.engine')
+        self.expand_joints_path = '"ISBFSAR/assets/32_to_122.npy'
+        self.skeleton_types_path = '"ISBFSAR/assets/skeleton_types.pkl'
         self.skeleton = skeleton_type
         self.yolo_thresh = 0.3
         self.nms_thresh = 0.7
@@ -86,12 +86,12 @@ class TRXConfig(object):
 
         # DEPLOYMENT
         if input_type == "rgb":
-            self.final_ckpt_path = "modules/ar/modules/raws/rgb/3000.pth"
+            self.final_ckpt_path = "ISBFSAR/modules/ar/modules/raws/rgb/3000.pth"
         elif input_type == "skeleton":
-            self.final_ckpt_path = "modules/ar/modules/raws/DISC.pth"
+            self.final_ckpt_path = "ISBFSAR/modules/ar/modules/raws/DISC.pth"
         elif input_type == "hybrid":
-            self.final_ckpt_path = "modules/ar/modules/raws/hybrid/1714_truncated_resnet.pth"
-        self.trt_path = 'modules/ar/modules/{}/trx.engine'.format(engine_dir)
+            self.final_ckpt_path = "ISBFSAR/modules/ar/modules/raws/hybrid/1714_truncated_resnet.pth"
+        self.trt_path = 'ISBFSAR/modules/ar/modules/{}/trx.engine'.format(engine_dir)
         self.seq_len = seq_len
 
 
@@ -109,10 +109,10 @@ class FaceDetectorConfig:
 
 class GazeEstimatorConfig:
     def __init__(self):
-        self.camera_params = 'assets/camera_params.yaml'
-        self.normalized_camera_params = 'assets/eth-xgaze.yaml'
+        self.camera_params = 'ISBFSAR/assets/camera_params.yaml'
+        self.normalized_camera_params = 'ISBFSAR/assets/eth-xgaze.yaml'
         self.normalized_camera_distance = 0.6
-        self.checkpoint = 'modules/focus/gaze_estimation/modules/raw/eth-xgaze_resnet18.pth'
+        self.checkpoint = 'ISBFSAR/modules/focus/gaze_estimation/modules/raw/eth-xgaze_resnet18.pth'
         self.image_size = [224, 224]
 
 
@@ -129,7 +129,7 @@ class FocusConfig:
         self.dist_thr = 0.3  # when distant, roll under this thr is considered focus
         self.foc_rot_thr = 0.7  # when close, roll above this thr is considered not focus
         self.patience = 3  # result is based on the majority of previous observations
-        self.sample_params_path = "assets/sample_params.yaml"
+        self.sample_params_path = "ISBFSAR/assets/sample_params.yaml"
 
 
 class MutualGazeConfig:
