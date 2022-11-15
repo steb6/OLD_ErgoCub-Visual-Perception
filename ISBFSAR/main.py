@@ -1,4 +1,3 @@
-from queue import Empty, Full
 import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
 import pickle as pkl
 from multiprocessing.managers import BaseManager
@@ -9,20 +8,38 @@ import numpy as np
 import time
 from ISBFSAR.modules.ar.ar import ActionRecognizer
 import cv2
-# from playsound import playsound
 from ISBFSAR.modules.hpe.hpe import HumanPoseEstimator
 from ISBFSAR.utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig, FocusConfig
 from ISBFSAR.utils.params import TRXConfig
 from multiprocessing import Process, Queue
 
+from configs.action_rec_config import Network
+from utils.concurrency import Node
 
 docker = os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False)
 
 
-class ISBFSAR:
-    def __init__(self, args, visualizer=True, video_input=None):
+class ISBFSAR(Node):
+    def __init__(self, args):
+        super().__init__(**Network.to_dict())
         self.input_type = args.input_type
+        self.cam_width = args.cam_width
+        self.cam_height = args.cam_height
+        self.window_size = args.window_size
+        self.fps_s = []
+        self.last_poses = []
+        self.skeleton_scale = args.skeleton_scale
+        self.acquisition_time = args.acquisition_time
+        self.edges = None
+        self.focus_in = None
+        self.focus_out = None
+        self.focus_proc = None
+        self.hpe_in = None
+        self.hpe_out = None
+        self.hpe_proc = None
+        self.ar = None
 
+    def startup(self):
         # Load modules
         self.focus_in = Queue(1)
         self.focus_out = Queue(1)
@@ -39,38 +56,7 @@ class ISBFSAR:
         self.hpe_proc.start()
 
         self.ar = ActionRecognizer(TRXConfig(), add_hook=False)
-
-        # Create communication with host
-        BaseManager.register('get_queue')
-        manager = BaseManager(address=("host.docker.internal", 50000), authkey=b'abracadabra')
-        manager.connect()
-        self._in_queue = manager.get_queue('source_human')  # To get rgb or msg
-        self._out_queue = manager.get_queue('sink')  # To send element to VISPY
-
-        # Variables
-        self.cam_width = args.cam_width
-        self.cam_height = args.cam_height
-        self.window_size = args.window_size
-        self.fps_s = []
-        self.last_poses = []
-        self.skeleton_scale = args.skeleton_scale
-        self.acquisition_time = args.acquisition_time
-        self.edges = None
-
-    def _send_all(self, data, blocking):
-        msg = {}
-        if not blocking:
-            while not self._out_queue.empty():
-                try:
-                    msg = self._out_queue.get(block=False)
-                except Empty:
-                    break
-
-        msg.update(data)
-        try:
-            self._out_queue.put(msg, block=blocking)
-        except Full:
-            pass
+        self.load()
 
     def get_frame(self, img=None, log=None):
         """
@@ -154,49 +140,44 @@ class ISBFSAR:
         if log is not None:
             elements["log"] = log
 
-        self._send_all(elements, blocking=False)
-        # self._out_queue.put(elements)
-
         return elements
 
-    def run(self):
-        while True:
-            log = None
-            data = self._in_queue.get()
+    def loop(self, data):
+        log = None
 
-            if "msg" in data.keys() and data["msg"] != '':
+        if "msg" in data.keys() and data["msg"] != '':
 
-                msg = data["msg"]
-                msg = msg.strip()
-                msg = msg.split()
+            msg = data["msg"]
+            msg = msg.strip()
+            msg = msg.split()
 
-                # select appropriate command
-                if msg[0] == 'close' or msg[0] == 'exit' or msg[0] == 'quit' or msg[0] == 'q':
-                    break
+            # select appropriate command
+            if msg[0] == 'close' or msg[0] == 'exit' or msg[0] == 'quit' or msg[0] == 'q':
+                exit()
 
-                elif msg[0] == "add" and len(msg) > 1:
-                    self._send_all({"ACK": True}, blocking=False)
-                    # self._out_queue.put({"ACK": True})  # This must be sent as answer to not stop the program
-                    log = self.learn_command(msg[1:])
-                    data = self._in_queue.get()
+            elif msg[0] == "add" and len(msg) > 1:
+                self._send_all({"ACK": True}, blocking=False)
+                log = self.learn_command(msg[1:])
+                data = self._in_queue.get()
 
-                elif msg[0] == "remove" and len(msg) > 1:
-                    log = self.forget_command(msg[1])
+            elif msg[0] == "remove" and len(msg) > 1:
+                log = self.forget_command(msg[1])
 
-                # elif msg[0] == "test" and len(msg) > 1:
-                #     self.test_video(msg[1])
+            # elif msg[0] == "test" and len(msg) > 1:
+            #     self.test_video(msg[1])
 
-                elif msg[0] == "save":
-                    log = self.save()
+            elif msg[0] == "save":
+                log = self.save()
 
-                elif msg[0] == "load":
-                    log = self.load()
+            elif msg[0] == "load":
+                log = self.load()
 
-                elif msg[0] == "debug":
-                    self.debug()
-                else:
-                    log = "Not a valid command!"
-            self.get_frame(img=data["rgb"], log=log)
+            elif msg[0] == "debug":
+                self.debug()
+            else:
+                log = "Not a valid command!"
+        d = self.get_frame(img=data["rgb"], log=log)
+        return {"sink": d}
 
     # def test_video(self, path):
     #     if not os.path.exists(path):

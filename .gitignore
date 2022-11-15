@@ -147,3 +147,4 @@ dmypy.json
 /.github/
 .python_history
 *.engine
+*.mp4
