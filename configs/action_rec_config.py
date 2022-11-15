@@ -25,6 +25,16 @@ class Logging(BaseConfig):
     keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
 
 
+class MAIN(BaseConfig):
+    class Args:
+        input_type = input_type  # rgb or skeleton
+        cam_width = 640
+        cam_height = 480
+        window_size = seq_len
+        skeleton_scale = 2200.
+        acquisition_time = 3  # Seconds
+
+
 class Network(BaseConfig):
     ip = 'host.docker.internal'  # 'host.docker.internal'
     port = 50000

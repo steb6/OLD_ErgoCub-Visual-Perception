@@ -12,16 +12,16 @@ docker = os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False)
 
 
 class ISBFSAR(Node):
-    def __init__(self, args):
+    def __init__(self, input_type, cam_width, cam_height, window_size, skeleton_scale, acquisition_time):
         super().__init__(**Network.to_dict())
-        self.input_type = args.input_type
-        self.cam_width = args.cam_width
-        self.cam_height = args.cam_height
-        self.window_size = args.window_size
+        self.input_type = input_type
+        self.cam_width = cam_width
+        self.cam_height = cam_height
+        self.window_size = window_size
         self.fps_s = []
         self.last_poses = []
-        self.skeleton_scale = args.skeleton_scale
-        self.acquisition_time = args.acquisition_time
+        self.skeleton_scale = skeleton_scale
+        self.acquisition_time = acquisition_time
         self.edges = None
         self.focus_in = None
         self.focus_out = None
