@@ -5,45 +5,44 @@ from ISBFSAR.modules.hpe.utils.misc import postprocess_yolo_output, homography, 
 import einops
 import numpy as np
 from ISBFSAR.utils.tensorrt_runner import Runner
-from ISBFSAR.utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig
 from tqdm import tqdm
 import cv2
 from ISBFSAR.utils.matplotlib_visualizer import MPLPosePrinter
 
 
 class HumanPoseEstimator:
-    def __init__(self, model_config, cam_config, just_box=None):
+    def __init__(self, just_box=None, yolo_thresh=None, nms_thresh=None, num_aug=None, skeleton=None,
+                 yolo_engine_path=None, image_transformation_engine_path=None, bbone_engine_path=None,
+                 heads_engine_path=None, skeleton_types_path=None, expand_joints_path=None, fx=None, fy=None, ppx=None,
+                 ppy=None, width=None, height=None):
 
-        if just_box is None:
-            self.just_box = model_config.just_box
-        else:
-            self.just_box = just_box
+        self.just_box = just_box
 
-        self.yolo_thresh = model_config.yolo_thresh
-        self.nms_thresh = model_config.nms_thresh
-        self.num_aug = model_config.num_aug
+        self.yolo_thresh = yolo_thresh
+        self.nms_thresh = nms_thresh
+        self.num_aug = num_aug
         self.n_test = 1 if self.num_aug < 1 else self.num_aug
 
         # Intrinsics and K matrix of RealSense
         self.K = np.zeros((3, 3), np.float32)
-        self.K[0][0] = cam_config.fx
-        self.K[0][2] = cam_config.ppx
-        self.K[1][1] = cam_config.fy
-        self.K[1][2] = cam_config.ppy
+        self.K[0][0] = fx
+        self.K[0][2] = ppx
+        self.K[1][1] = fy
+        self.K[1][2] = ppy
         self.K[2][2] = 1
 
         # Load conversions
-        self.skeleton = model_config.skeleton
-        self.expand_joints = np.load(model_config.expand_joints_path)
-        with open(model_config.skeleton_types_path, "rb") as input_file:
+        self.skeleton = skeleton
+        self.expand_joints = np.load(expand_joints_path)
+        with open(skeleton_types_path, "rb") as input_file:
             self.skeleton_types = pickle.load(input_file)
 
         # Load modules
-        self.yolo = Runner(model_config.yolo_engine_path)  # model_config.yolo_engine_path
+        self.yolo = Runner(yolo_engine_path)  # model_config.yolo_engine_path
         if not self.just_box:
-            self.image_transformation = Runner(model_config.image_transformation_path)
-            self.bbone = Runner(model_config.bbone_engine_path)
-            self.heads = Runner(model_config.heads_engine_path)
+            self.image_transformation = Runner(image_transformation_engine_path)
+            self.bbone = Runner(bbone_engine_path)
+            self.heads = Runner(heads_engine_path)
 
     def estimate(self, frame):
 
@@ -175,6 +174,7 @@ class HumanPoseEstimator:
 
 if __name__ == "__main__":
     import pycuda.autoinit  # IMPORTANT leave this here! It creates the context for CUDA
+    from ISBFSAR.utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig
     args = MainConfig()
     vis = MPLPosePrinter()
 

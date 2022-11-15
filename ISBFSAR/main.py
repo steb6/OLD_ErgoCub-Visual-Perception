@@ -1,19 +1,11 @@
 import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
 import pickle as pkl
-from multiprocessing.managers import BaseManager
-from ISBFSAR.modules.focus.gaze_estimation.focus import FocusDetector
-# from modules.focus.mutual_gaze.focus import FocusDetector
 import os
 import numpy as np
 import time
-from ISBFSAR.modules.ar.ar import ActionRecognizer
 import cv2
-from ISBFSAR.modules.hpe.hpe import HumanPoseEstimator
-from ISBFSAR.utils.params import MetrabsTRTConfig, RealSenseIntrinsics, MainConfig, FocusConfig
-from ISBFSAR.utils.params import TRXConfig
 from multiprocessing import Process, Queue
-
-from configs.action_rec_config import Network
+from configs.action_rec_config import Network, HPE, FOCUS, AR
 from utils.concurrency import Node
 
 docker = os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False)
@@ -43,19 +35,15 @@ class ISBFSAR(Node):
         # Load modules
         self.focus_in = Queue(1)
         self.focus_out = Queue(1)
-        self.focus_proc = Process(target=run_module, args=(FocusDetector,
-                                                           (FocusConfig(),),
-                                                           self.focus_in, self.focus_out))
+        self.focus_proc = Process(target=run_module, args=(FOCUS, self.focus_in, self.focus_out))
         self.focus_proc.start()
 
         self.hpe_in = Queue(1)
         self.hpe_out = Queue(1)
-        self.hpe_proc = Process(target=run_module, args=(HumanPoseEstimator,
-                                                         (MetrabsTRTConfig(), RealSenseIntrinsics()),
-                                                         self.hpe_in, self.hpe_out))
+        self.hpe_proc = Process(target=run_module, args=(HPE, self.hpe_in, self.hpe_out))
         self.hpe_proc.start()
 
-        self.ar = ActionRecognizer(TRXConfig(), add_hook=False)
+        self.ar = AR.model(**AR.Args.to_dict())
         self.load()
 
     def get_frame(self, img=None, log=None):
@@ -179,34 +167,6 @@ class ISBFSAR(Node):
         d = self.get_frame(img=data["rgb"], log=log)
         return {"sink": d}
 
-    # def test_video(self, path):
-    #     if not os.path.exists(path):
-    #         self.log("Video file does not exists!")
-    #         return
-    #
-    #     video = cv2.VideoCapture(path)
-    #     video_length = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    #     i = 0
-    #     fps = video.get(cv2.CAP_PROP_FPS)
-    #     ret, img = video.read()
-    #     while ret:
-    #         start = time.time()
-    #         key = cv2.waitKey(1)
-    #         if key > -1:
-    #             break
-    #         self.log("{:.2f}%".format((i / (video_length - 1)) * 100))
-    #         _ = self.get_frame(img)
-    #
-    #         n_skip = int((time.time() - start) * fps)
-    #         for _ in range(n_skip):
-    #             _, _ = video.read()
-    #             i += 1
-    #
-    #         ret, img = video.read()
-    #         i += 1
-    #     self.log("100%")
-    #     video.release()
-
     def forget_command(self, flag):
         if self.ar.remove(flag):
             return "Action {} removed".format(flag)
@@ -271,44 +231,6 @@ class ISBFSAR(Node):
             while (time.time() - start) < off_time:  # Busy wait
                 continue
 
-        # playsound('assets' + os.sep + 'stop.wav')
-        # self.log("100%")
-
-        # If a path to a video is provided
-        # else:
-        #     if not os.path.exists(flag[0]):
-        #         self.log("Video file does not exist!")
-        #         return
-        #     # self.cap.release()
-        #     video = cv2.VideoCapture(flag[0])
-        #     poses = []
-        #     fps = video.get(cv2.CAP_PROP_FPS)
-        #     video_length = video.get(cv2.CAP_PROP_FRAME_COUNT)
-        #     ret, img = video.read()
-        #     i = 0
-        #     while ret:
-        #         start = time.time()
-        #         img = cv2.resize(img, (self.cam_width, self.cam_height))
-        #         cv2.waitKey(1)
-        #         _, pose, _ = self.get_frame(img)
-        #
-        #         if pose is not None:
-        #             poses.append(pose)
-        #
-        #         n_skip = int((time.time() - start) * fps)
-        #         for _ in range(n_skip):
-        #             _, _ = video.read()
-        #             i += 1
-        #
-        #         ret, img = video.read()
-        #         self.log("{:.2f}%".format((i / (video_length - 1)) * 100))
-        #         i += 1
-        #     self.log("100%")
-        #     video.release()
-        #     flag = flag[0].split('/')[-1].split('.')[0]  # between / and .
-        #     data = np.stack(poses)
-        #     data = data[:(len(data) - (len(data) % self.window_size))]
-        #     data = data[list(range(0, len(data), int(len(data) / self.window_size)))]
         inp = {"flag": flag,
                "data": {},
                "requires_focus": requires_focus}
@@ -337,16 +259,10 @@ class ISBFSAR(Node):
         return f"Loaded {len(self.ar.support_set)} classes"
 
 
-def run_module(module, configurations, input_queue, output_queue):
+def run_module(module, input_queue, output_queue):
     import pycuda.autoinit
-    x = module(*configurations)
+    x = module.model(**module.Args.to_dict())
     while True:
         inp = input_queue.get()
         y = x.estimate(inp)
         output_queue.put(y)
-
-
-if __name__ == "__main__":
-    master = ISBFSAR(MainConfig(), visualizer=True)
-    master.load()
-    master.run()

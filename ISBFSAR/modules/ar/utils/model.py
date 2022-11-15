@@ -259,6 +259,8 @@ class TRXOS(nn.Module):
             return x
 
     def __init__(self, args, add_hook=False):
+        from ISBFSAR.modules.ar.utils.configuration import TRXTrainConfig
+        args = TRXTrainConfig()
         super(TRXOS, self).__init__()
         self.args = args
         self.way = args.way

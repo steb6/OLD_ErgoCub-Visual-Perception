@@ -1,20 +1,20 @@
 from collections import OrderedDict
 import numpy as np
 from ISBFSAR.modules.ar.utils.model import TRXOS
-from ISBFSAR.utils.params import TRXConfig
 import torch
 from tqdm import tqdm
 import copy
 
 
 class ActionRecognizer:
-    def __init__(self, args, add_hook=False):
-        self.input_type = args.input_type
-        self.device = args.device
+    def __init__(self, input_type=None, device=None, add_hook=False, final_ckpt_path=None, seq_len=None, way=None,
+                 n_joints=None):
+        self.input_type = input_type
+        self.device = device
 
-        self.ar = TRXOS(TRXConfig(), add_hook=add_hook)
+        self.ar = TRXOS(None, add_hook=add_hook)
         # Fix dataparallel
-        state_dict = torch.load(args.final_ckpt_path, map_location=torch.device(0))['model_state_dict']
+        state_dict = torch.load(final_ckpt_path, map_location=torch.device(0))['model_state_dict']
         state_dict = OrderedDict({param.replace('.module', ''): data for param, data in state_dict.items()})
         self.ar.load_state_dict(state_dict)
         self.ar.cuda()
@@ -23,9 +23,9 @@ class ActionRecognizer:
         self.support_set = OrderedDict()
         self.requires_focus = {}
         self.previous_frames = []
-        self.seq_len = args.seq_len
-        self.way = args.way
-        self.n_joints = args.n_joints if args.input_type == "skeleton" else 0
+        self.seq_len = seq_len
+        self.way = way
+        self.n_joints = n_joints if input_type == "skeleton" else 0
 
     def inference(self, data):
         """

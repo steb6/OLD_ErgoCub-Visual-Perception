@@ -26,7 +26,8 @@ class MainConfig(object):
 class MetrabsTRTConfig(object):
     def __init__(self):
         self.yolo_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'yolo.engine')
-        self.image_transformation_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'image_transformation1.engine')
+        self.image_transformation_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir,
+                                                      'image_transformation1.engine')
         self.bbone_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'bbone1.engine')
         self.heads_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'heads1.engine')
         self.expand_joints_path = os.path.join(base_dir, "assets", '32_to_122.npy')
@@ -48,55 +49,6 @@ class RealSenseIntrinsics(object):
         self.height = 480
 
 
-class TRXConfig(object):
-    def __init__(self):
-        # MAIN
-        self.model = "DISC"  # DISC or EXP
-        self.input_type = input_type  # skeleton or rgb
-        self.way = 5
-        self.shot = 1
-        self.device = 'cuda'
-        self.skeleton_type = skeleton_type
-
-        # CHOICE DATASET
-        data_name = "NTURGBD_to_YOLO_METRO_122"
-        self.data_path = f"D:\\datasets\\{data_name}" if not ubuntu else f"../datasets/{data_name}"
-        self.n_joints = 30
-
-        # TRAINING
-        self.initial_lr = 1e-2 if self.input_type == "skeleton" else 3e-4
-        self.n_task = (100 if self.input_type == "skeleton" else 30) if not ubuntu else (10000 if self.input_type == "skeleton" else 500)
-        self.optimize_every = 1  # Put to 1 if not used, not 0 or -1!
-        self.batch_size = 1 if not ubuntu else (32 if self.input_type == "skeleton" else 4)
-        self.n_epochs = 10000
-        self.start_discriminator_after_epoch = 0  # self.n_epochs  # TODO CAREFUL
-        self.first_mile = self.n_epochs  # 15 TODO CAREFUL
-        self.second_mile = self.n_epochs  # 1500 TODO CAREFUL
-        self.n_workers = 0 if not ubuntu else 16
-        self.log_every = 10 if not ubuntu else 1000
-        self.eval_every_n_epoch = 10
-
-        # MODEL
-        self.trans_linear_in_dim = 256 if self.input_type == "skeleton" else 1000 if self.input_type == "rgb" else 512
-        self.trans_linear_out_dim = 128
-        self.query_per_class = 1
-        self.trans_dropout = 0.
-        self.num_gpus = 4
-        self.temp_set = [2]
-        self.checkpoints_path = "checkpoints"
-
-        # DEPLOYMENT
-        if input_type == "rgb":
-            self.final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "rgb", "3000.pth")
-        elif input_type == "skeleton":
-            self.final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "DISC.pth")
-        elif input_type == "hybrid":
-            self.final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "hybrid",
-                                                "1714_truncated_resnet.pth")
-        self.trt_path = os.path.join(base_dir, "modules", "ar", engine_dir, "trx.engine")
-        self.seq_len = seq_len
-
-
 class FocusModelConfig:
     def __init__(self):
         self.name = 'resnet18'
@@ -114,7 +66,8 @@ class GazeEstimatorConfig:
         self.camera_params = os.path.join(base_dir, "assets", "camera_params.yaml")
         self.normalized_camera_params = os.path.join(base_dir, 'assets', 'eth-xgaze.yaml')
         self.normalized_camera_distance = 0.6
-        self.checkpoint = os.path.join(base_dir, 'modules', 'focus', 'gaze_estimation', 'modules', 'raw', 'eth-xgaze_resnet18.pth')
+        self.checkpoint = os.path.join(base_dir, 'modules', 'focus', 'gaze_estimation', 'modules', 'raw',
+                                       'eth-xgaze_resnet18.pth')
         self.image_size = [224, 224]
 
 
