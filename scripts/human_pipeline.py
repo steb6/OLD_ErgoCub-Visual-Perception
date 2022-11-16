@@ -30,6 +30,7 @@ class ISBFSAR(Node):
         self.hpe_out = None
         self.hpe_proc = None
         self.ar = None
+        self.last_data = None
 
     def startup(self):
         # Load modules
@@ -132,6 +133,12 @@ class ISBFSAR(Node):
 
     def loop(self, data):
         log = None
+        print(data.keys())  # TODO REMOVE
+
+        if "rgb" in data.keys():  # Save last data with image
+            self.last_data = data
+        if "rgb" not in data.keys():  # It arrives just a message, but we need all
+            data.update(self.last_data)
 
         if "msg" in data.keys() and data["msg"] != '':
 
@@ -144,7 +151,7 @@ class ISBFSAR(Node):
                 exit()
 
             elif msg[0] == "add" and len(msg) > 1:
-                self._send_all({"ACK": True}, blocking=False)
+                # self._send_all({"ACK": True}, blocking=False)
                 log = self.learn_command(msg[1:])
                 data = self._in_queue.get()
 
@@ -201,8 +208,10 @@ class ISBFSAR(Node):
                     visual = cv2.circle(visual, point, 1, (255, 0, 0))
                 for edge in self.edges:
                     visual = cv2.line(visual, pose[edge[0]], pose[edge[1]], (255, 0, 0))
-            cv2.imshow("support_set_SK", visual)
-        cv2.waitKey(0)
+                cv2.imwrite("SUPPORT_SET.png", visual)
+            # cv2.imshow("support_set_SK", visual)
+        # cv2.waitKey(0)
+        return "Support saved to SUPPORT_SET.png"
 
     def learn_command(self, flag):
         requires_focus = "-focus" in flag

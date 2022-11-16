@@ -1,8 +1,9 @@
 from multiprocessing import Process
 from multiprocessing.managers import BaseManager
 from queue import Empty, Full
-
+import os
 import cv2
+os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 from vispy import app, scene, visuals
 from vispy.scene.visuals import Text, Image
 import numpy as np
@@ -32,6 +33,7 @@ class VISPYVisualizer:
 
         msg.update(data)
         try:
+            print(msg)
             queue.put(msg, block=blocking)
         except Full:
             pass
@@ -298,7 +300,6 @@ class VISPYVisualizer:
                 self.focuses.pop(key)
         if len(self.actions) == 0:
             self.os_score.center = (2, 2)
-        print(elements)
 
     def on_draw(self, event):
         pass
@@ -306,5 +307,5 @@ class VISPYVisualizer:
 
 if __name__ == "__main__":
     output_proc = Process(target=VISPYVisualizer.create_visualizer,
-                          args=("sink", "souce_human"))
+                          args=("sink", "source_human"))
     output_proc.start()

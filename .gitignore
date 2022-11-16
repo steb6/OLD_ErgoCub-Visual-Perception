@@ -150,3 +150,4 @@ dmypy.json
 *.mp4
 *ERASEME*
 grasping/grasp_detection/ransac_gd/trt/assets/ransac200_5000.onnx
+SUPPORT_SET.png

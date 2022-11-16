@@ -36,7 +36,7 @@ class MAIN(BaseConfig):
 
 
 class Network(BaseConfig):
-    ip = 'host.docker.internal'
+    ip = 'localhost'
     port = 50000
     in_queue = 'source_human'
     out_queues = ['sink']
