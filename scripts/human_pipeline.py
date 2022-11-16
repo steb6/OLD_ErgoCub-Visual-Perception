@@ -133,12 +133,12 @@ class ISBFSAR(Node):
 
     def loop(self, data):
         log = None
-        print(data.keys())  # TODO REMOVE
 
         if "rgb" in data.keys():  # Save last data with image
             self.last_data = data
-        if "rgb" not in data.keys():  # It arrives just a message, but we need all
+        else:  # It arrives just a message, but we need all
             data.update(self.last_data)
+            print(data.keys())
 
         if "msg" in data.keys() and data["msg"] != '':
 
