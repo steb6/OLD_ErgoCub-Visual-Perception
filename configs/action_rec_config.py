@@ -1,8 +1,8 @@
 from logging import INFO
 import os
-from ISBFSAR.modules.ar.ar import ActionRecognizer
-from ISBFSAR.modules.focus.gaze_estimation.focus import FocusDetector
-from ISBFSAR.modules.hpe.hpe import HumanPoseEstimator
+from action_rec.ar.ar import ActionRecognizer
+from action_rec.focus.gaze_estimation.focus import FocusDetector
+from action_rec.hpe.hpe import HumanPoseEstimator
 from utils.confort import BaseConfig
 import platform
 
@@ -10,7 +10,7 @@ input_type = "skeleton"  # rgb, skeleton or hybrid
 docker = os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False)
 seq_len = 8 if input_type != "skeleton" else 16
 ubuntu = platform.system() == "Linux"
-base_dir = "ISBFSAR"
+base_dir = "action_rec"
 engine_dir = "engines" if not docker else os.path.join("engines", "docker")
 
 
@@ -48,13 +48,13 @@ class HPE(BaseConfig):
     model = HumanPoseEstimator
 
     class Args:
-        yolo_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'yolo.engine')
-        image_transformation_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir,
+        yolo_engine_path = os.path.join(base_dir, 'hpe', 'weights', engine_dir, 'yolo.engine')
+        image_transformation_engine_path = os.path.join(base_dir, 'hpe', 'weights', engine_dir,
                                                         'image_transformation1.engine')
-        bbone_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'bbone1.engine')
-        heads_engine_path = os.path.join(base_dir, 'modules', 'hpe', 'weights', engine_dir, 'heads1.engine')
-        expand_joints_path = os.path.join(base_dir, "assets", '32_to_122.npy')
-        skeleton_types_path = os.path.join(base_dir, "assets", "skeleton_types.pkl")
+        bbone_engine_path = os.path.join(base_dir, 'hpe', 'weights', engine_dir, 'bbone1.engine')
+        heads_engine_path = os.path.join(base_dir, 'hpe', 'weights', engine_dir, 'heads1.engine')
+        expand_joints_path = os.path.join(base_dir, "hpe", 'assets', '32_to_122.npy')
+        skeleton_types_path = os.path.join(base_dir, "hpe", "assets", "skeleton_types.pkl")
         skeleton = 'smpl+head_30'
         yolo_thresh = 0.3
         nms_thresh = 0.7
@@ -70,7 +70,6 @@ class HPE(BaseConfig):
 
 
 # TODO GO HERE TO CHANGE OPTIONS FOR FOCUS (CHANGE IN FUTURE)
-# from ISBFSAR.modules.focus.gaze_estimation.configuration import FocusConfig
 
 
 class FOCUS(BaseConfig):
@@ -82,11 +81,12 @@ class FOCUS(BaseConfig):
         dist_thr = 0.3  # when distant, roll under this thr is considered focus
         foc_rot_thr = 0.7  # when close, roll above this thr is considered not focus
         patience = 3  # result is based on the majority of previous observations
-        sample_params_path = os.path.join(base_dir, "assets", "sample_params.yaml")
+        sample_params_path = os.path.join(base_dir, "focus", "gaze_estimation", "assets",
+                                          "sample_params.yaml")
 
 
 # TODO GO HERE TO CHANGE OPTION FOR TRAINING ACTION RECOGNITION (CHANGE IN FUTURE)
-# from ISBFSAR.modules.ar.utils.configuration import TRXTrainConfig
+# from ISBFSAR.ar.utils.configuration import TRXTrainConfig
 
 
 class AR(BaseConfig):
@@ -95,13 +95,14 @@ class AR(BaseConfig):
     class Args:
         input_type = input_type  # skeleton or rgb
         device = 'cuda'
+        support_set_path = os.path.join(base_dir, "ar", "assets", "saved")
 
         if input_type == "rgb":
-            final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "rgb", "3000.pth")
+            final_ckpt_path = os.path.join(base_dir, "ar", "weights", "raws", "rgb", "3000.pth")
         elif input_type == "skeleton":
-            final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "DISC.pth")
+            final_ckpt_path = os.path.join(base_dir, "ar", "weights", "raws", "DISC.pth")
         elif input_type == "hybrid":
-            final_ckpt_path = os.path.join(base_dir, "modules", "ar", "modules", "raws", "hybrid",
+            final_ckpt_path = os.path.join(base_dir, "ar", "weights", "raws", "hybrid",
                                            "1714_truncated_resnet.pth")
 
         seq_len = seq_len

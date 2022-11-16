@@ -1,5 +1,4 @@
 import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
-import pickle as pkl
 import os
 import numpy as np
 import time
@@ -45,7 +44,7 @@ class ISBFSAR(Node):
         self.hpe_proc.start()
 
         self.ar = AR.model(**AR.Args.to_dict())
-        self.load()
+        self.ar.load()
 
     def get_frame(self, img=None, log=None):
         """
@@ -158,14 +157,11 @@ class ISBFSAR(Node):
             elif msg[0] == "remove" and len(msg) > 1:
                 log = self.forget_command(msg[1])
 
-            # elif msg[0] == "test" and len(msg) > 1:
-            #     self.test_video(msg[1])
-
             elif msg[0] == "save":
-                log = self.save()
+                log = self.ar.save()
 
             elif msg[0] == "load":
-                log = self.load()
+                log = self.ar.load()
 
             elif msg[0] == "debug":
                 self.debug()
@@ -252,20 +248,6 @@ class ISBFSAR(Node):
             inp["data"]["imgs"] = np.stack([x[1] for x in data])
         self.ar.train(inp)
         return "Action " + flag + " learned successfully!"
-
-    def save(self):
-        with open('ISBFSAR/assets/saved/support_set.pkl', 'wb') as outfile:
-            pkl.dump(self.ar.support_set, outfile)
-        with open('ISBFSAR/assets/saved/requires_focus.pkl', 'wb') as outfile:
-            pkl.dump(self.ar.requires_focus, outfile)
-        return "Classes saved successfully in " + 'assets/saved/support_set.pkl'
-
-    def load(self):
-        with open('ISBFSAR/assets/saved/support_set.pkl', 'rb') as pkl_file:
-            self.ar.support_set = pkl.load(pkl_file)
-        with open('ISBFSAR/assets/saved/requires_focus.pkl', 'rb') as pkl_file:
-            self.ar.requires_focus = pkl.load(pkl_file)
-        return f"Loaded {len(self.ar.support_set)} classes"
 
 
 def run_module(module, input_queue, output_queue):
