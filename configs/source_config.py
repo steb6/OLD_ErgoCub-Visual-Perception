@@ -12,8 +12,6 @@ class Logging(BaseConfig):
             recurring = False
 
 class Network(BaseConfig):
-    ip = 'localhost'
-    port = 50000
     out_queues = ['source_grasping']
     # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
     blocking = True

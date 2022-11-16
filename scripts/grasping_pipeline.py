@@ -8,7 +8,7 @@ from loguru import logger
 from grasping.utils.input import RealSense
 from grasping.utils.misc import compose_transformations, reload_package
 from grasping.utils.avg_timer import Timer
-from utils.concurrency import Node
+from utils.concurrency import YarpNode
 
 from utils.logging import setup_logger
 import tensorrt as trt
@@ -39,7 +39,7 @@ setup_logger(**Logging.Logger.Params.to_dict())
 #                 logger.success('Configuration reloaded')
 #             self.ft[file.name] = mt
 
-class Grasping(Node):
+class Grasping(YarpNode):
     def __init__(self):
         super().__init__(**Network.to_dict())
         self.seg_model = None

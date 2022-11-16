@@ -20,8 +20,6 @@ class Logging(BaseConfig):
 
 
 class Network(BaseConfig):
-    ip = 'host.docker.internal'
-    port = 50000
     in_queue = 'source_grasping'
     out_queues = ['sink']
     # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
