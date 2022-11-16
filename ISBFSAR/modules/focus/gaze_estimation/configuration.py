@@ -3,6 +3,7 @@ import os
 base_dir = "ISBFSAR"
 
 
+# LEGACY
 class FocusModelConfig:
     def __init__(self):
         self.name = 'resnet18'

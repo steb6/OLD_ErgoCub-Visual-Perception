@@ -24,15 +24,14 @@ class Sink(Node):
         self.face_bbox = None
         self.actions = None
         self.edges = None
+        self.is_true = None
         super().__init__(**Network.to_dict())
 
-    # def startup(self):
-        # logger.info('Starting up...')
-        # logo = cv2.imread('assets/logo_transparent.png')
-        # logo = cv2.resize(logo, (640, 480))
-        # cv2.imshow('Ergocub-Visual-Perception', logo)
-        # cv2.waitKey(1)
-        # logger.success('Start up complete.')
+    def startup(self):
+        logo = cv2.imread('assets/logo.png')
+        logo = cv2.resize(logo, (640, 480))
+        cv2.imshow('Ergocub-Visual-Perception', logo)
+        cv2.waitKey(1)
 
     def loop(self, data: dict) -> dict:
         if 'img' in data.keys():
@@ -44,36 +43,36 @@ class Sink(Node):
             self.mask = data['mask']
         img = draw_mask(img, self.mask)
 
-        if 'center' in data:
+        if 'center' in data.keys():
             self.center = data['center']
         if self.center is not None:
             img = cv2.circle(img, project_pc(self.center)[0], 5, (0, 255, 0)).astype(np.uint8)
 
-        if 'hands' in data:
+        if 'hands' in data.keys():
             self.hands = data['hands']
         if self.hands is not None:
             img = project_hands(img, self.hands['right'], self.hands['left'])
 
         # HUMAN ########################################################################################################
-        if 'fps' in data:
+        if 'fps' in data.keys():
             self.fps = data['fps']
         if self.fps is not None:
             img = cv2.putText(img, f'FPS: {int(self.fps)}', (10, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
                               cv2.LINE_AA)
 
-        if 'distance' in data:
+        if 'distance' in data.keys():
             self.distance = data['distance']
         if self.distance is not None:
             img = cv2.putText(img, f'DIST: {int(self.distance)}', (200, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
                               cv2.LINE_AA)
 
-        if 'focus' in data:
+        if 'focus' in data.keys():
             self.focus = data['focus']
         if self.focus is not None:
             img = cv2.putText(img, "FOCUS" if self.focus else "NOT FOCUS", (400, 20), cv2.FONT_ITALIC, 0.7,
                               (0, 255, 0) if self.focus else (0, 0, 255), 1, cv2.LINE_AA)
 
-        if 'pose' in data and self.hands is not None:
+        if 'pose' in data.keys() and self.hands is None:
             self.pose = data["pose"]
             self.edges = data["edges"]
         if self.pose is not None and self.hands is None:

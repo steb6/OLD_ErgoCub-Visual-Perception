@@ -1,3 +1,5 @@
+from multiprocessing import Process
+from multiprocessing.managers import BaseManager
 import cv2
 from vispy import app, scene, visuals
 from vispy.scene.visuals import Text, Image
@@ -41,8 +43,11 @@ class VISPYVisualizer:
 
     def __init__(self, input_queue, output_queue):
 
-        self.input_queue = input_queue
-        self.output_queue = output_queue
+        BaseManager.register('get_queue')
+        manager = BaseManager(address=('localhost', 50000), authkey=b'abracadabra')
+        manager.connect()
+        self.input_queue = manager.get_queue(input_queue)
+        self.output_queue = manager.get_queue(output_queue)
         self.show = True
 
         self._timer = app.Timer('auto', connect=self.on_timer, start=True)
@@ -50,8 +55,8 @@ class VISPYVisualizer:
 
         self.canvas = scene.SceneCanvas(keys='interactive')
         self.canvas.size = 1200, 600
-        self.canvas.show()
         self.canvas.events.key_press.connect(self.printer)
+        self.canvas.show()
 
         self.os = True
 
@@ -275,6 +280,13 @@ class VISPYVisualizer:
                 self.focuses.pop(key)
         if len(self.actions) == 0:
             self.os_score.center = (2, 2)
+        print(elements)
 
     def on_draw(self, event):
         pass
+
+
+if __name__ == "__main__":
+    output_proc = Process(target=VISPYVisualizer.create_visualizer,
+                          args=("sink", "souce_human"))
+    output_proc.start()

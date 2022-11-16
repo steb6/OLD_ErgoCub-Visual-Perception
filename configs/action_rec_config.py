@@ -36,7 +36,7 @@ class MAIN(BaseConfig):
 
 
 class Network(BaseConfig):
-    ip = 'host.docker.internal'  # 'host.docker.internal'
+    ip = 'localhost'  # 'host.docker.internal'
     port = 50000
     in_queue = 'source_human'
     out_queues = ['sink']
@@ -70,7 +70,7 @@ class HPE(BaseConfig):
 
 
 # TODO GO HERE TO CHANGE OPTIONS FOR FOCUS (CHANGE IN FUTURE)
-from ISBFSAR.modules.focus.gaze_estimation.configuration import FocusConfig
+# from ISBFSAR.modules.focus.gaze_estimation.configuration import FocusConfig
 
 
 class FOCUS(BaseConfig):
@@ -86,7 +86,7 @@ class FOCUS(BaseConfig):
 
 
 # TODO GO HERE TO CHANGE OPTION FOR TRAINING ACTION RECOGNITION (CHANGE IN FUTURE)
-from ISBFSAR.modules.ar.utils.configuration import TRXTrainConfig
+# from ISBFSAR.modules.ar.utils.configuration import TRXTrainConfig
 
 
 class AR(BaseConfig):

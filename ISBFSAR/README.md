@@ -19,7 +19,7 @@ This repository contains different modules:
 ## Installation
 
 The program is divided into two parts:
-- [source.py](source.py) runs on the host machine, it connects to the RealSense (or webcam), it provides frames to [main.py](main.py), it visualizes the results with the [VISPYVisualizer](utils/output.py)
+- [source.py](source.py) runs on the host machine, it connects to the RealSense (or webcam), it provides frames to [main.py](main.py), it visualizes the results with the [VISPYVisualizer](../scripts/human_console.py)
 - [main.py](main.py) runs either in a Conda environment or in a Docker, it is responsible for all the computation part.
 
 ![](assets/Immagine1.png)
