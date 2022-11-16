@@ -1,5 +1,7 @@
 from multiprocessing import Process
 from multiprocessing.managers import BaseManager
+from queue import Empty, Full
+
 import cv2
 from vispy import app, scene, visuals
 from vispy.scene.visuals import Text, Image
@@ -19,13 +21,29 @@ def get_color(value):
 
 class VISPYVisualizer:
 
+    def send_all(self, data, queue, blocking=False):
+        msg = {}
+        if not blocking:
+            while not queue.empty():
+                try:
+                    msg = queue.get(block=False)
+                except Empty:
+                    break
+
+        msg.update(data)
+        try:
+            queue.put(msg, block=blocking)
+        except Full:
+            pass
+
     def printer(self, x):
         if x.text == '\b':
             if len(self.input_text) > 1:
                 self.input_text = self.input_text[:-1]
             self.log.text = ''
         elif x.text == '\r':
-            self.output_queue.put(self.input_text[1:])  # Do not send '<'
+            self.send_all({"msg": self.input_text[1:]}, self.output_queue)
+            # self.output_queue.put()  # Do not send '<'
             self.input_text = '>'
             self.log.text = ''
         elif x.text == '\\':
