@@ -25,12 +25,13 @@ class Sink(Node):
         self.actions = None
         self.edges = None
         self.is_true = None
+        self.requires_focus = None
         super().__init__(**Network.to_dict())
 
     def startup(self):
-        logo = cv2.imread('assets/logo.png')
+        logo = cv2.imread('assets/logo.jpg')
         logo = cv2.resize(logo, (640, 480))
-        cv2.imshow('Ergocub-Visual-Perception', logo)
+        cv2.imshow('Ergocub-Visual-Perception', np.array(logo, dtype=np.uint8))
         cv2.waitKey(1)
 
     def loop(self, data: dict) -> dict:
@@ -110,11 +111,16 @@ class Sink(Node):
             self.actions = data["actions"]
         if 'is_true' in data.keys():
             self.is_true = data["is_true"]
+        if 'requires_focus' in data.keys():
+            self.requires_focus = data['requires_focus']
         if self.actions is not None and self.hands is None:
             if len(self.actions) > 1:
                 best = max(self.actions, key=self.actions.get)
-                if self.is_true > 0.75:
-                    img = cv2.putText(img, best, (300, 460), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1, cv2.LINE_AA)
+                if self.is_true > 0.66:
+                    textsize = cv2.getTextSize(best, cv2.FONT_ITALIC, 1, 2)[0]
+                    textX = int((img.shape[1] - textsize[0]) / 2)
+                    text_color = (0, 255, 0) if not self.requires_focus[best] or (self.requires_focus[best] and focus) else (230, 172, 37)
+                    img = cv2.putText(img, best, (textX, 450), cv2.FONT_ITALIC, 1, text_color, 2, cv2.LINE_AA)
 
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
