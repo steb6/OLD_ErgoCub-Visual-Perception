@@ -6,7 +6,7 @@ from configs.source_config import Logging, Network, Input
 from utils.concurrency import SrcYarpNode
 from utils.logging import setup_logger
 
-setup_logger(**Logging.Logger.Params.to_dict())
+setup_logger(level=Logging.level)
 
 
 @logger.catch(reraise=True)
@@ -15,9 +15,6 @@ class Source(SrcYarpNode):
         super().__init__(**Network.to_dict())
         self.camera = None
 
-        self.i = 0
-        self.rgb, self.depth = None, None
-
     def startup(self):
         self.camera = Input.camera(**Input.Params.to_dict())
 
@@ -25,12 +22,9 @@ class Source(SrcYarpNode):
 
         while True:
             try:
-                while self.i != 261:
-                    self.rgb, self.depth = self.camera.read()
-                    self.i += 1
+                rgb, depth = self.camera.read()
+                data = {'rgb': copy.deepcopy(rgb), 'depth': copy.deepcopy(depth)}
 
-                logger.info("Sending frame.", recurring=True)
-                data = {'rgb': copy.deepcopy(self.rgb), 'depth': copy.deepcopy(self.depth)}
                 return {k: data for k in Network.out_queues}
 
             except RuntimeError as e:

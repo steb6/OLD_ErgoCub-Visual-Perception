@@ -144,7 +144,10 @@ dmypy.json
 /test/
 /.dgl/
 .bash_history
-/.dgl/
-/.github/
 /.github/
 .python_history
+*.engine
+*.mp4
+*ERASEME*
+grasping/grasp_detection/ransac_gd/trt/assets/ransac200_5000.onnx
+/video/

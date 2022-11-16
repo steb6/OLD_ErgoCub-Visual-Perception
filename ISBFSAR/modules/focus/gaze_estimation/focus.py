@@ -4,25 +4,28 @@ from tqdm import tqdm
 from scipy.spatial.transform import Rotation
 import yaml
 import numpy as np
+from .configuration import FocusConfig  # TODO CHANGE THIS
 
 
 class FocusDetector:
-    def __init__(self, config):
-        self.gaze_estimator = GazeEstimator(config)
+    def __init__(self, area_thr=None, close_thr=None, dist_thr=None, foc_rot_thr=None, patience=None,
+                 sample_params_path=None):
 
-        self.area_thr = config.area_thr  # head bounding box must be over this value to be close
-        self.close_thr = config.close_thr  # When close, z value over this thr is considered focus
-        self.dist_thr = config.dist_thr  # when distant, roll under this thr is considered focus
-        self.foc_rot_thr = config.foc_rot_thr  # when close, roll above this thr is considered not focus
-        self.patience = config.patience  # result is based on the majority of previous observations
+        self.area_thr = area_thr  # head bounding box must be over this value to be close
+        self.close_thr = close_thr  # When close, z value over this thr is considered focus
+        self.dist_thr = dist_thr  # when distant, roll under this thr is considered focus
+        self.foc_rot_thr = foc_rot_thr  # when close, roll above this thr is considered not focus
+        self.patience = patience  # result is based on the majority of previous observations
 
         self.is_close = None
         self.is_focus = None
 
-        with open(config.sample_params_path) as f:
+        with open(sample_params_path) as f:
             self.data = yaml.safe_load(f)
         self.camera_matrix = np.array(self.data['camera_matrix']['data']).reshape(3, 3)
         self.focuses = []
+
+        self.gaze_estimator = GazeEstimator(FocusConfig())
 
     def print_bbox(self, frame, face):
         bbox = np.round(face.bbox).astype(int).tolist()
@@ -145,7 +148,7 @@ def convert_pt(point):
 
 
 if __name__ == "__main__":
-    from utils.params import FocusConfig
+    from ISBFSAR.utils.params import FocusConfig
 
     cap = cv2.VideoCapture(0)
     # ok, img = cap.read()

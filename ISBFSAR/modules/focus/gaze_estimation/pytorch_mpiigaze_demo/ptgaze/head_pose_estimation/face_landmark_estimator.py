@@ -35,7 +35,8 @@ class LandmarkEstimator:
             self.detector = mediapipe.solutions.face_mesh.FaceMesh(
                 max_num_faces=config.face_detector.mediapipe_max_num_faces,
                 static_image_mode=config.face_detector.
-                mediapipe_static_image_mode)
+                mediapipe_static_image_mode,
+                min_detection_confidence=0.05, min_tracking_confidence=0.05)
         else:
             raise ValueError
 

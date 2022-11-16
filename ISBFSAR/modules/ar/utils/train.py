@@ -21,11 +21,13 @@ import numpy as np
 # gpu_id = 1 if ubuntu else 0
 # torch.cuda.set_device(gpu_id)
 # torch.manual_seed(0)
+from ISBFSAR.modules.ar.utils.configuration import TRXTrainConfig
+
 device = TRXConfig().device
 
 
 if __name__ == "__main__":
-    args = TRXConfig()
+    args = TRXTrainConfig()
 
     b = args.batch_size
 

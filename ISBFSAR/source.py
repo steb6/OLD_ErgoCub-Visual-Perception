@@ -4,7 +4,7 @@ from multiprocessing import Queue, Process
 from multiprocessing.managers import BaseManager
 from typing import Dict, Union
 from ISBFSAR.utils.input import RealSense
-from ISBFSAR.utils.output import VISPYVisualizer
+from scripts.human_console import VISPYVisualizer
 from ISBFSAR.utils.params import MainConfig
 
 

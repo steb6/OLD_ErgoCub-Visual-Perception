@@ -6,15 +6,19 @@ import pyrealsense2 as rs
 
 
 class Logging(BaseConfig):
-    class Logger:
-        class Params:
-            level = INFO  # Minimum logging level or list of logging levels
-            recurring = False
+    level = INFO
+
 
 class Network(BaseConfig):
+<<<<<<< HEAD
     out_queues = ['source_grasping']
+=======
+    ip = 'localhost'
+    port = 50000
+    out_queues = ['source_human', 'source_grasping']
+>>>>>>> 06f3406fdc185c71bc0d0ce0cbfe58d6d5f26425
     # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
-    blocking = True
+    blocking = False
 
 
 class Input(BaseConfig):
@@ -24,7 +28,7 @@ class Input(BaseConfig):
         rgb_res = (640, 480)
         depth_res = (640, 480)
         fps = 30
-        depth_format = rs.format.z16
-        color_format = rs.format.rgb8
-        from_file = 'assets/robo_arena_hole_filling_640.bag'
-        skip_frames = False
+        # depth_format = rs.format.z16  # TODO MAY CAUSE PROBLEM
+        # color_format = rs.format.rgb8  # TODO MAY CAUSE PROBLEM
+        # from_file = 'assets/robot_arena_videos/tilting_camera.bag'
+        skip_frames = True

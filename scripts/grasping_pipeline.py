@@ -1,15 +1,13 @@
 import copy
-
+from collections import defaultdict
 import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
 from loguru import logger
-
 from grasping.utils.input import RealSense
 from grasping.utils.misc import compose_transformations, reload_package
 from grasping.utils.avg_timer import Timer
 from utils.concurrency import YarpNode
-
 from utils.logging import setup_logger
 import tensorrt as trt
 # https://github.com/NVIDIA/TensorRT/issues/1945
@@ -53,7 +51,7 @@ class Grasping(YarpNode):
 
         self.reconstruction = None
         self.prev_denormalize = None
-        self.action = {"action": "give"}
+        self.action = {"action": "none"}
 
         self.timer = Timer(window=10)
         # self.watch = Watch()
@@ -66,11 +64,10 @@ class Grasping(YarpNode):
         self.pcr_decoder = ShapeCompletion.Decoder.model(**ShapeCompletion.Decoder.Args.to_dict())
         self.grasp_detector = GraspDetection.model(**GraspDetection.Args.to_dict())
 
-    @logger.catch(reraise=False)
     def loop(self, data):
         # self.watch.check()
 
-        output = {}
+        output = {k: None for k in Logging.keys}
 
         self.timer.start()
         # Input
@@ -103,6 +100,11 @@ class Grasping(YarpNode):
         segmented_depth = copy.deepcopy(depth)
         segmented_depth[mask != 1] = 0
 
+        if len(segmented_depth.nonzero()[0]) > 4096:
+            distance = segmented_depth[segmented_depth != 0].min()
+            if distance < 700: self.action = 'give'
+            else: self.action = 'none'
+
         if (c1:=(self.action != 'give')) or (c2:=(len(segmented_depth.nonzero()[0]) < 4096)):
             if not c1 and c2:
                 logger.warning('Warning: not enough input points. Skipping reconstruction', recurring=True)
@@ -113,7 +115,6 @@ class Grasping(YarpNode):
 
         logger.info("Depth segmented", recurring=True)
 
-        distance = segmented_depth[segmented_depth != 0].mean()
         segmented_pc = RealSense.depth_pointcloud(segmented_depth)
 
         logger.info("Depth to point cloud", recurring=True)
