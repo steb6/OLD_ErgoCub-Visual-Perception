@@ -4,6 +4,7 @@ from multiprocessing import Process
 
 from queue import Empty, Full
 
+import numpy as np
 from loguru import logger
 import yarp
 
@@ -36,19 +37,28 @@ def connect(manager):
     logger.success('Connected to manager.')
 
 
-class Node(Process, ABC):
+class YarpNode(Process, ABC):
 
-    def __init__(self, ip, port, in_queue=None, out_queues=None, blocking=False):
+    def __init__(self, in_queue=None, out_queues=None, blocking=False):
         super(Process, self).__init__()
 
         self.blocking = blocking
 
         yarp.Network.init()
-        p = yarp.BufferedPortBottle()
-        p.open("/python");
 
-        self._in_queue = manager.get_queue(in_queue)
-        self._out_queues = {k: manager.get_queue(k) for k in out_queues}
+        if in_queue is not None:
+            in_queue = '/' + in_queue + '_in'
+            self._in_queue = yarp.BufferedPortBottle()
+            self._in_queue.open("in_queue")
+
+        self._out_queues = {}
+        for out_q in out_queues:
+            p = yarp.BufferedPortBottle()
+            p.open('/' + out_q + '_out')
+            yarp.Network.connect('/' + out_q + '_out', '/' + out_q + '_in')
+
+            self._out_queues[out_q] = p
+
 
         logger.info(f'Input queue: {in_queue} - Output queues: {", ".join(out_queues)}')
 
@@ -73,20 +83,7 @@ class Node(Process, ABC):
 
     def _send_all(self, data, blocking):
         for dest in data:
-
-            msg = {}
-            if not blocking:
-                while not self._out_queues[dest].empty():
-                    try:
-                        msg = self._out_queues[dest].get(block=False)
-                    except Empty:
-                        break
-
-            msg.update(data[dest])
-            try:
-                self._out_queues[dest].put(msg, block=blocking)
-            except Full:
-                pass
+            self._out_queues[dest].write()
 
     def startup(self):
         pass
@@ -94,20 +91,42 @@ class Node(Process, ABC):
     def shutdown(self):
         pass
 
-    @abstractmethod
-    def loop(self, data: dict) -> dict:
-        pass
+    # @abstractmethod
+    # def loop(self, data: dict) -> dict:
+    #     pass
 
-    @_exception_handler
-    @logger.catch(reraise=True)
+    # @_exception_handler
+    # @logger.catch(reraise=True)
     def run(self) -> None:
         self._startup()
 
         # This is to wait for the first message even in non-blocking mode
         data = self._recv()
+        data = self.unpack(data)
         while True:
             data = self.loop(data)
+            data = self.prepare(data)
             self._send_all(data, self.blocking)
 
             data = self._recv()
 
+    def prepare(self, data):
+        for dest in data:
+            bottle = self._out_queues[dest].prepare()
+            bottle.clear()
+            for k, v in data[dest].items():
+                if isinstance(v, np.ndarray):
+                    v = v.astype(np.float32)
+                    yarp_data = yarp.ImageRgb()
+                    yarp_data.setExternal(v, v.shape[1], v.shape[0])
+
+                property = bottle.addDict()
+                property.put(k, yarp.Value(yarp_data, 10))
+        return data
+
+    def unpack(self, data):
+        data.find()
+
+
+if __name__ == '__main__':
+    YarpNode('source', ['sink', 'action_recognition'])
