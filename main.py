@@ -2,6 +2,8 @@ from subprocess import Popen
 from configs.main_config import Config
 from utils.misc import Shell
 
+#  :D
+
 if __name__ == '__main__':
     shell = Shell('cmd')
 
