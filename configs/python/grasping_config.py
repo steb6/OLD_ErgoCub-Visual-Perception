@@ -5,7 +5,6 @@ from grasping.grasp_detection import RansacGraspDetectorTRT
 from grasping.segmentation.fcn.fcn_segmentator_trt import FcnSegmentatorTRT
 from grasping.shape_completion.confidence_pcr.decoder import ConfidencePCRDecoder
 from grasping.shape_completion.confidence_pcr.encoder import ConfidencePCRDecoderTRT
-from utils.concurrency import YarpNode
 from utils.confort import BaseConfig
 
 
@@ -21,14 +20,12 @@ class Logging(BaseConfig):
 
 
 class Network(BaseConfig):
-
-    node = YarpNode
-
-    class Args:
-        in_queue = 'source_grasping'
-        out_queues = ['sink']
-        # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
-        blocking = False
+    ip = 'localhost'
+    port = 50000
+    in_queue = 'source_grasping'
+    out_queues = ['sink']
+    # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
+    blocking = False
 
 
 class Segmentation(BaseConfig):

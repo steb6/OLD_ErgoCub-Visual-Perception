@@ -1,6 +1,5 @@
 from logging import INFO
 
-from utils.concurrency import YarpNode
 from utils.confort import BaseConfig
 
 
@@ -9,9 +8,8 @@ class Logging(BaseConfig):
 
 
 class Network(BaseConfig):
-    node = YarpNode
-
-    class Args:
-        in_queue = 'sink'
-        out_queues = []
+    ip = 'localhost'
+    port = 50000
+    in_queue = 'sink'
+    out_queues = []
 

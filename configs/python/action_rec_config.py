@@ -3,7 +3,6 @@ import os
 from action_rec.ar.ar import ActionRecognizer
 from action_rec.focus.gaze_estimation.focus import FocusDetector
 from action_rec.hpe.hpe import HumanPoseEstimator
-from utils.concurrency import YarpNode
 from utils.confort import BaseConfig
 import platform
 
@@ -37,13 +36,12 @@ class MAIN(BaseConfig):
 
 
 class Network(BaseConfig):
-    node = YarpNode
-
-    class Params:
-        in_queue = 'source_human'
-        out_queues = ['sink']
-        # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
-        blocking = False
+    ip = 'localhost'
+    port = 50000
+    in_queue = 'source_human'
+    out_queues = ['sink']
+    # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
+    blocking = False
 
 
 class HPE(BaseConfig):

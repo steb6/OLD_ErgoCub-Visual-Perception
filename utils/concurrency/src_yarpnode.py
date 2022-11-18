@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from utils.concurrency.yarpnode import _exception_handler, YarpNode
+from utils.concurrency.yarpnode import YarpNode
 from loguru import logger
 
 
@@ -23,5 +23,8 @@ class SrcYarpNode(YarpNode):
         # This is to wait for the first message even in non-blocking mode
         while True:
             data = self.loop()
-            data = self.prepare(data)
-            self._send_all(data, self.blocking)
+            self.prepare(data)
+            # self._send_all(data, self.blocking)
+
+
+

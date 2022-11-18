@@ -1,6 +1,5 @@
 from logging import INFO
 
-from utils.concurrency import SrcYarpNode
 from utils.confort import BaseConfig
 from utils.input import RealSense
 import pyrealsense2 as rs
@@ -11,13 +10,11 @@ class Logging(BaseConfig):
 
 
 class Network(BaseConfig):
-    node = SrcYarpNode
-
-    class Args:
-        out_queues = {'realsense': ['rgb', 'depth']}
-
-        # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
-        blocking = False
+    ip = 'localhost'
+    port = 50000
+    out_queues = ['source_human', 'source_grasping']
+    # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
+    blocking = False
 
 
 class Input(BaseConfig):
