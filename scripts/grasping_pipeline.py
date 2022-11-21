@@ -7,7 +7,6 @@ from loguru import logger
 from grasping.utils.input import RealSense
 from grasping.utils.misc import compose_transformations, reload_package
 from grasping.utils.avg_timer import Timer
-from utils.concurrency import Node
 from utils.logging import setup_logger
 import tensorrt as trt
 # https://github.com/NVIDIA/TensorRT/issues/1945
@@ -37,9 +36,9 @@ setup_logger(**Logging.Logger.Params.to_dict())
 #                 logger.success('Configuration reloaded')
 #             self.ft[file.name] = mt
 
-class Grasping(Node):
+class Grasping(Network.node):
     def __init__(self):
-        super().__init__(**Network.to_dict())
+        super().__init__(**Network.Args.to_dict())
         self.seg_model = None
         self.denoiser = None
         self.pcr_encoder = None
@@ -102,6 +101,8 @@ class Grasping(Node):
 
         if len(segmented_depth.nonzero()[0]) > 4096:
             distance = segmented_depth[segmented_depth != 0].min()
+            output['distance'] = distance
+
             if distance < 700: self.action = 'give'
             else: self.action = 'none'
 
@@ -183,8 +184,8 @@ class Grasping(Node):
             res = {'sink': output}
             return res
 
-        hands = {'right': compose_transformations([poses[1].T, poses[0][np.newaxis] * (var * 2) + mean, R]),
-                 'left': compose_transformations([poses[3].T, poses[2][np.newaxis] * (var * 2) + mean, R])}
+        hands = np.stack([compose_transformations([poses[1].T, poses[0][np.newaxis] * (var * 2) + mean, R]),
+                           compose_transformations([poses[3].T, poses[2][np.newaxis] * (var * 2) + mean, R])], axis=-1)
 
         if Logging.debug:
             output['hands'] = hands

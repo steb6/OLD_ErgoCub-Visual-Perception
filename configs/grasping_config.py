@@ -17,7 +17,7 @@ class Logging(BaseConfig):
 
     debug = True
     # options: rgb depth mask 'fps center hands partial scene reconstruction transform
-    keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
+    keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices', 'distance']
 
 
 class Network(BaseConfig):
@@ -25,8 +25,8 @@ class Network(BaseConfig):
     node = YarpNode
 
     class Args:
-        in_queue = 'source_grasping'
-        out_queues = ['sink']
+        in_queues = {'realsense': ['rgb', 'depth']}
+        out_queues = {'sink': ['size', 'poses']}
         # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
         blocking = False
 

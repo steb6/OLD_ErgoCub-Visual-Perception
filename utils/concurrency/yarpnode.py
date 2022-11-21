@@ -4,9 +4,13 @@ from multiprocessing import Process
 
 from queue import Empty, Full
 
+import cv2
 import numpy as np
 from loguru import logger
 import yarp
+
+import sysv_ipc
+import struct
 
 
 def _exception_handler(function):
@@ -21,45 +25,60 @@ def _exception_handler(function):
     return wrapper
 
 
-def connect(manager):
-    logger.info('Connecting to manager...')
-    start = time.time()
-
-    while True:
-        try:
-            manager.connect()
-            break
-        except ConnectionRefusedError as e:
-            if time.time() - start > 120:
-                logger.error('Connection refused.')
-                raise e
-            time.sleep(1)
-    logger.success('Connected to manager.')
-
-
 class YarpNode(Process, ABC):
 
-    def __init__(self, in_queue=None, out_queues=None, blocking=False):
+    def __init__(self, in_queues=None, out_queues=None, blocking=False):
         super(Process, self).__init__()
+        self.ipc = sysv_ipc.MessageQueue(1234, sysv_ipc.IPC_CREAT)
 
         self.blocking = blocking
+        self.np_buffer = {}
+        self.yarp_data = {}
 
         yarp.Network.init()
 
-        if in_queue is not None:
-            in_queue = '/' + in_queue + '_in'
-            self._in_queue = yarp.BufferedPortBottle()
-            self._in_queue.open("in_queue")
+        self._in_queues = {}
+        if in_queues is not None:
+            for in_q in in_queues:
+                for port in in_queues[in_q]:
+                    if port == "depth":
+                        p = yarp.BufferedPortImageFloat()
+
+                        depth_buffer = bytearray(
+                            np.zeros((480, 640), dtype=np.float32))
+                        depth_image = yarp.ImageFloat()
+                        depth_image.resize(640, 480)
+                        depth_image.setExternal(depth_buffer, 640, 480)
+
+                        self.yarp_data[f'/{in_q}/{port}'] = depth_image
+                        self.np_buffer[f'/{in_q}/{port}'] = depth_buffer
+
+                    if port == "rgb":
+                        p = yarp.BufferedPortImageRgb()
+
+                        rgb_buffer = bytearray(np.zeros((480, 640, 3), dtype=np.uint8))
+                        rgb_image = yarp.ImageRgb()
+                        rgb_image.resize(640, 480)
+                        rgb_image.setExternal(rgb_buffer, 640, 480)
+
+                        self.yarp_data[f'/{in_q}/{port}'] = rgb_image
+                        self.np_buffer[f'/{in_q}/{port}'] = rgb_buffer
+
+                    p.open(f'/{in_q}/{port}_in')
+                    self._in_queues[f'/{in_q}/{port}'] = p
+
+                    yarp.Network.connect(f'/{in_q}/{port}_out', f'/{in_q}/{port}_in')
+                    print(f"Connecting /{in_q}/{port}_out to /{in_q}/{port}_in")
 
         self._out_queues = {}
         for out_q in out_queues:
             for port in out_queues[out_q]:
                 p = yarp.Port()
                 p.open(f'/{out_q}/{port}_out')
-                # yarp.Network.connect(f'/{out_q}/{port}_out', f'/{out_q}/{port}_in')
-                self._out_queues[f'{out_q}/{port}'] = p
+                self._out_queues[f'/{out_q}/{port}'] = p
 
-        logger.info(f'Input queue: {in_queue} - Output queues: {", ".join(out_queues)}')
+        logger.info(f'Input queue: {", ".join(in_queues) if in_queues is not None else "None"}'
+                    f' - Output queues: {", ".join(out_queues)}')
 
     def _startup(self):
         logger.info('Starting up...')
@@ -69,20 +88,26 @@ class YarpNode(Process, ABC):
         logger.success('Start up complete.')
 
     def _recv(self):
+        msg = {}
+        for name, port in self._in_queues.items():
 
-        data = self._in_queue.get()
+            while True:
+                if (data := port.read(False)) is not None:
+                    break
 
-        return data
+            data_type = name.split('/')[-1]
 
-    def _recv_nowait(self):
-        if not self._in_queue.empty():
-            return self._recv()
-        else:
-            return None
+            if data_type == 'rgb':
+                self.yarp_data[name].copy(data)
+                data = (np.frombuffer(self.np_buffer[name], dtype=np.uint8).reshape(480, 640, 3))
 
-    def _send_all(self, data, blocking):
-        for dest in data:
-            self._out_queues[dest].write()
+            if data_type == 'depth':
+                self.yarp_data[name].copy(data)
+                data = (np.frombuffer(self.np_buffer[name], dtype=np.float32).reshape(480, 640) * 1000).astype(np.uint16)
+
+            msg[data_type] = data
+
+        return msg
 
     def startup(self):
         pass
@@ -90,53 +115,28 @@ class YarpNode(Process, ABC):
     def shutdown(self):
         pass
 
-    # @abstractmethod
-    # def loop(self, data: dict) -> dict:
-    #     pass
-
-    # @_exception_handler
-    # @logger.catch(reraise=True)
     def run(self) -> None:
         self._startup()
 
         # This is to wait for the first message even in non-blocking mode
         data = self._recv()
-        data = self.unpack(data)
+
         while True:
             data = self.loop(data)
-            data = self.prepare(data)
-            self._send_all(data, self.blocking)
-
+            self._send_all(data)
             data = self._recv()
 
-    def prepare(self, data):
-        for dest in data:
+    def _send_all(self, data):
+        data = data['sink']
+        distance = data['distance'] if data['distance'] is not None else -1
+        poses = data['hands'] if data['hands'] is not None else np.full([4, 4, 2], -1)
 
-            for k, v in data[dest].items():
-                bottle = yarp.Bottle()
-                bottle.clear()
+        msg = struct.pack("h", distance) + poses.tobytes(order='C')
 
-                if isinstance(v, np.ndarray) and (v.ndim == 3):
-                    # v = v.astype(np.float32)
-                    # yarp_data = yarp.ImageRgb()
-                    # yarp_data.setExternal(v, v.shape[1], v.shape[0])
-                    yarp_image = yarp.ImageRgb()
-                    yarp_image.resize(v.shape[1], v.shape[0])
-                    yarp_image.setExternal(v.data, v.shape[1], v.shape[0])
-                elif isinstance(v, np.ndarray) and (v.ndim == 2):
-                    v = v / 1000
-                    v = v.astype(np.float32)
-                    # yarp_data = yarp.ImageMono16()
-                    # yarp_data.setExternal(v, v.shape[1], v.shape[0])
-                    yarp_image = yarp.ImageFloat()
-                    yarp_image.resize(v.shape[1], v.shape[0])
-                    yarp_image.setExternal(v.data, v.shape[1], v.shape[0])
-                else:
-                    raise ValueError(f"Unsupported output type for key {dest}/{k}")
+        while self.ipc.current_messages > 0:
+            self.ipc.receive(block=False)
 
-                self._out_queues[f'{dest}/{k}'].write(yarp_image)
-
-        return data
+        self.ipc.send(msg, False, type=1)
 
     def unpack(self, data):
         data.find()
