@@ -140,7 +140,7 @@ class FocusDetector:
             self.focuses = self.focuses[-self.patience:]
             self.is_focus = self.focuses.count(True) > len(self.focuses) / 2
 
-        return focus, fc
+        return bool(focus), fc
 
 
 def convert_pt(point):

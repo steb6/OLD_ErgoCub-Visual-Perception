@@ -1,6 +1,6 @@
 # Base human Pipeline Image
 # It starts from a TensorRT container and install python, opencv, pytorch
-# docker run -it --rm --gpus=all -v "%cd%":/home/ecub ecub:latest /bin/bash
+# docker run -it --rm --gpus=all -v $(pwd):/home/ecub --network host andrewr96/ecub-env:yarp
 FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
 
 ENV CONDA_VERSION "py38_4.11.0"

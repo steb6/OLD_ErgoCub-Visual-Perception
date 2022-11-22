@@ -1,11 +1,11 @@
 from abc import abstractmethod
 from queue import Empty, Full
 
-from utils.concurrency.node import _exception_handler, Node
+from utils.concurrency.pypy_node import _exception_handler, PyPyNode
 from loguru import logger
 
 
-class SrcNode(Node):
+class SrcPyNode(PyPyNode):
 
     def _startup(self):
         logger.info('Starting up...')

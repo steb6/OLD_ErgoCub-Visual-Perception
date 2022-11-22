@@ -35,7 +35,7 @@ def connect(manager):
     logger.success('Connected to manager.')
 
 
-class Node(Process, ABC):
+class PyPyNode(Process, ABC):
 
     def __init__(self, ip, port, in_queue=None, out_queues=None, blocking=False):
         super(Process, self).__init__()

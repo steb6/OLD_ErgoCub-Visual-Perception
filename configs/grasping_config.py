@@ -1,11 +1,13 @@
 from logging import INFO
 
+import numpy as np
+
 from grasping.denoising import DbscanDenoiser
 from grasping.grasp_detection import RansacGraspDetectorTRT
 from grasping.segmentation.fcn.fcn_segmentator_trt import FcnSegmentatorTRT
 from grasping.shape_completion.confidence_pcr.decoder import ConfidencePCRDecoder
 from grasping.shape_completion.confidence_pcr.encoder import ConfidencePCRDecoderTRT
-from utils.concurrency import YarpNode
+from utils.concurrency import YarpSysNode
 from utils.confort import BaseConfig
 
 
@@ -17,16 +19,16 @@ class Logging(BaseConfig):
 
     debug = True
     # options: rgb depth mask 'fps center hands partial scene reconstruction transform
-    keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices', 'distance']
+    keys = {'distance': -1, 'hands': np.full([4, 4, 2], -1.)}
 
 
 class Network(BaseConfig):
 
-    node = YarpNode
+    node = YarpSysNode
 
     class Args:
         in_queues = {'realsense': ['rgb', 'depth']}
-        out_queues = {'sink': ['size', 'poses']}
+        out_queues = {'sink': ['distance', 'hands']}
         # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
         blocking = False
 

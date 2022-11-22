@@ -1,17 +1,18 @@
+# import time
 import time
 from abc import ABC, abstractmethod
+# from collections import OrderedDict
 from multiprocessing import Process
+from multiprocessing.managers import BaseManager
 
 from queue import Empty, Full
 
-import cv2
 import numpy as np
 from loguru import logger
 import yarp
-
 import sysv_ipc
 import struct
-
+# print("WHA CI ARRIVO SENZA UN SENSO AHAHAHAHAH :D")
 
 def _exception_handler(function):
     # Graceful shutdown
@@ -24,12 +25,29 @@ def _exception_handler(function):
 
     return wrapper
 
+def connect(manager):
+    logger.info('Connecting to manager...')
+    start = time.time()
 
-class YarpNode(Process, ABC):
+    while True:
+        try:
+            manager.connect()
+            break
+        except ConnectionRefusedError as e:
+            if time.time() - start > 120:
+                logger.error('Connection refused.')
+                raise e
+            time.sleep(1)
+    logger.success('Connected to manager.')
 
-    def __init__(self, in_queues=None, out_queues=None, blocking=False):
+class YarpPyNode(Process, ABC):
+
+    def __init__(self, ip, port, in_queues=None, out_queues=None, blocking=False):
         super(Process, self).__init__()
-        self.ipc = sysv_ipc.MessageQueue(1234, sysv_ipc.IPC_CREAT)
+
+        BaseManager.register('get_queue')
+        manager = BaseManager(address=(ip, port), authkey=b'abracadabra')
+        connect(manager)
 
         self.blocking = blocking
         self.np_buffer = {}
@@ -70,12 +88,7 @@ class YarpNode(Process, ABC):
                     yarp.Network.connect(f'/{in_q}/{port}_out', f'/{in_q}/{port}_in')
                     print(f"Connecting /{in_q}/{port}_out to /{in_q}/{port}_in")
 
-        self._out_queues = {}
-        for out_q in out_queues:
-            for port in out_queues[out_q]:
-                p = yarp.Port()
-                p.open(f'/{out_q}/{port}_out')
-                self._out_queues[f'/{out_q}/{port}'] = p
+        self._out_queues = {k: manager.get_queue(k) for k in out_queues}
 
         logger.info(f'Input queue: {", ".join(in_queues) if in_queues is not None else "None"}'
                     f' - Output queues: {", ".join(out_queues)}')
@@ -126,21 +139,23 @@ class YarpNode(Process, ABC):
             self._send_all(data)
             data = self._recv()
 
-    def _send_all(self, data):
-        data = data['sink']
-        distance = data['distance'] if data['distance'] is not None else -1
-        poses = data['hands'] if data['hands'] is not None else np.full([4, 4, 2], -1)
+    def _send_all(self, data, blocking):
+        for dest in data:
 
-        msg = struct.pack("h", distance) + poses.tobytes(order='C')
+            msg = {}
+            if not blocking:
+                while not self._out_queues[dest].empty():
+                    try:
+                        msg = self._out_queues[dest].get(block=False)
+                    except Empty:
+                        break
 
-        while self.ipc.current_messages > 0:
-            self.ipc.receive(block=False)
-
-        self.ipc.send(msg, False, type=1)
+            msg.update(data[dest])
+            try:
+                self._out_queues[dest].put(msg, block=blocking)
+            except Full:
+                pass
 
     def unpack(self, data):
         data.find()
 
-
-if __name__ == '__main__':
-    YarpNode('source', ['sink', 'action_recognition'])

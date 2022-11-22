@@ -1,18 +1,24 @@
+import copy
+
 import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
+from configs.action_rec_config import Network, HPE, FOCUS, AR, MAIN, Logging  # TODO FIX
+# from pathlib import Path
+
 import os
 import numpy as np
 import time
 import cv2
 from multiprocessing import Process, Queue
-from configs.action_rec_config import Network, HPE, FOCUS, AR, MAIN
-from utils.concurrency import Node
+import sys
+# sys.path.insert(0,  Path(__file__).parent.parent.as_posix())
+
 
 docker = os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False)
 
 
-class ISBFSAR(Node):
+class ISBFSAR(Network.node):
     def __init__(self, input_type, cam_width, cam_height, window_size, skeleton_scale, acquisition_time):
-        super().__init__(**Network.to_dict())
+        super().__init__(**Network.Args.to_dict())
         self.input_type = input_type
         self.cam_width = cam_width
         self.cam_height = cam_height
@@ -49,13 +55,11 @@ class ISBFSAR(Node):
     def get_frame(self, img=None, log=None):
         """
         get frame, do inference, return all possible info
-        keys: img, bbox, img_preprocessed, distance, pose, edges, actions, is_true, requires_focus, focus, face_bbox,
+        keys: img, bbox, img_preprocessed, human_distance, pose, edges, actions, is_true, requires_focus, focus, face_bbox,
         fps
         """
         start = time.time()
-        elements = {"img": None, "img_preprocessed": None, "distance": None, "pose": None, "edges": None,
-                    "actions": None, "is_true": None, "requires_focus": None, "focus": None, "face_bbox": None,
-                    "fps": None, "bbox": None}
+        elements = copy.deepcopy(Logging.keys)
 
         ar_input = {}
 
@@ -94,7 +98,7 @@ class ISBFSAR(Node):
                 if self.edges is None:
                     self.edges = edges
                 if pose is not None:
-                    elements["distance"] = np.sqrt(np.sum(np.square(np.array([0, 0, 0]) - np.array(pose[0])))) * 2.5
+                    elements["human_distance"] = np.sqrt(np.sum(np.square(np.array([0, 0, 0]) - np.array(pose[0])))) * 2.5
                     pose = pose - pose[0, :]
                     elements["pose"] = pose
                     ar_input["sk"] = pose.reshape(-1)
@@ -107,6 +111,7 @@ class ISBFSAR(Node):
         actions, is_true, requires_focus = results
         elements["actions"] = actions
         elements["is_true"] = is_true
+        elements["action"] = list(actions.keys()).index(max(actions, key=actions.get)) if is_true > 0.66 else -1  # TODO PARAMETRIZE
         elements["requires_focus"] = requires_focus
 
         # FOCUS #######################################################
@@ -128,7 +133,7 @@ class ISBFSAR(Node):
         if log is not None:
             elements["log"] = log
 
-        return elements
+        return {k: v for k, v, in elements.items() if k in Logging.keys}
 
     def loop(self, data):
         log = None

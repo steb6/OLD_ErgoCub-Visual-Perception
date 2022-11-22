@@ -1,16 +1,20 @@
 import copy
+import sys
+from pathlib import Path
 
 from loguru import logger
 
+sys.path.insert(0, Path(__file__).parent.parent.as_posix())
+
 from configs.source_config import Logging, Network, Input
-from utils.concurrency import SrcNode, SrcYarpNode
+from utils.concurrency import SrcYarpNode
 from utils.logging import setup_logger
 
 setup_logger(level=Logging.level)
 
 
 @logger.catch(reraise=True)
-class Source(SrcYarpNode):
+class Source(Network.node):
     def __init__(self):
         super().__init__(**Network.Args.to_dict())
         self.camera = None

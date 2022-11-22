@@ -1,9 +1,14 @@
 import copy
-from collections import defaultdict
+import sys
+from pathlib import Path
+
 import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
 from loguru import logger
+
+sys.path.insert(0,  Path(__file__).parent.parent.as_posix())
+
 from grasping.utils.input import RealSense
 from grasping.utils.misc import compose_transformations, reload_package
 from grasping.utils.avg_timer import Timer
@@ -66,7 +71,7 @@ class Grasping(Network.node):
     def loop(self, data):
         # self.watch.check()
 
-        output = {k: None for k in Logging.keys}
+        output = copy.deepcopy(Logging.keys)
 
         self.timer.start()
         # Input
@@ -101,7 +106,7 @@ class Grasping(Network.node):
 
         if len(segmented_depth.nonzero()[0]) > 4096:
             distance = segmented_depth[segmented_depth != 0].min()
-            output['distance'] = distance
+            output['distance'] = int(distance)
 
             if distance < 700: self.action = 'give'
             else: self.action = 'none'

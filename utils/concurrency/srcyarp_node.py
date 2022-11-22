@@ -3,13 +3,13 @@ from abc import abstractmethod
 import numpy as np
 import yarp
 
-from utils.concurrency.yarpnode import YarpNode
+from utils.concurrency.yarpsys_node import YarpSysNode
 from loguru import logger
 
 from utils.input import RealSense
 
 
-class SrcYarpNode(YarpNode):
+class SrcYarpNode(YarpSysNode):
 
     def _startup(self):
         logger.info('Starting up...')

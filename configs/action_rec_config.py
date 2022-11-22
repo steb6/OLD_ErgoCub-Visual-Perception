@@ -1,11 +1,12 @@
-from logging import INFO
 import os
+from logging import INFO
 from action_rec.ar.ar import ActionRecognizer
 from action_rec.focus.gaze_estimation.focus import FocusDetector
 from action_rec.hpe.hpe import HumanPoseEstimator
-from utils.concurrency import YarpNode
+from utils.concurrency import YarpSysNode  # TODO THIS CAUSES TROUBLES
 from utils.confort import BaseConfig
 import platform
+
 
 input_type = "skeleton"  # rgb, skeleton or hybrid
 docker = os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False)
@@ -23,7 +24,7 @@ class Logging(BaseConfig):
 
     debug = True
     # options: rgb depth mask 'fps center hands partial scene reconstruction transform
-    keys = ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']
+    keys = {'action': -1, 'human_distance': -1., 'focus': False}
 
 
 class MAIN(BaseConfig):
@@ -37,14 +38,13 @@ class MAIN(BaseConfig):
 
 
 class Network(BaseConfig):
-    node = YarpNode
+    node = YarpSysNode
 
-    class Params:
-        in_queue = 'source_human'
-        out_queues = ['sink']
+    class Args:
+        in_queues = {'realsense': ['rgb', 'depth']}
+        out_queues = {'sink': ['human_distance', 'action', 'focus']}
         # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
         blocking = False
-
 
 class HPE(BaseConfig):
     model = HumanPoseEstimator
