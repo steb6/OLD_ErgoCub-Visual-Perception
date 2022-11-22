@@ -4,6 +4,7 @@ from action_rec.ar.ar import ActionRecognizer
 from action_rec.focus.gaze_estimation.focus import FocusDetector
 from action_rec.hpe.hpe import HumanPoseEstimator
 from utils.concurrency import YarpSysNode  # TODO THIS CAUSES TROUBLES
+from utils.concurrency.yarppy_node import YarpPyNode
 from utils.confort import BaseConfig
 import platform
 
@@ -38,11 +39,17 @@ class MAIN(BaseConfig):
 
 
 class Network(BaseConfig):
-    node = YarpSysNode
+    node = YarpPyNode
 
     class Args:
-        in_queues = {'realsense': ['rgb', 'depth']}
-        out_queues = {'sink': ['human_distance', 'action', 'focus']}
+        ip = "localhost"
+        port = 50000
+
+        in_config = {'realsense': ['rgb', 'depth']}
+
+        out_config = {'visualizer': {k: None for k in
+                                     ['fps_ar', 'human_distance', 'focus', 'pose', 'bbox', 'face_bbox', 'actions', 'is_true', 'requires_focus', 'edges']},
+                      'action_recognition_rpc': {'action': -1, 'human_distance': -1., 'focus': False}}
         # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
         blocking = False
 

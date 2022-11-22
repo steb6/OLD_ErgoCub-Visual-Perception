@@ -8,7 +8,7 @@ from queue import Queue
 from loguru import logger
 
 from utils.logging import setup_logger
-from configs.sink_config import Logging, Network
+from configs.manager_config import Logging, Network
 
 
 setup_logger(Logging.level)

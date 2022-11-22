@@ -50,7 +50,6 @@ class Grasping(Network.node):
         self.pcr_decoder = None
         self.grasp_detector = None
 
-        self.fps_s = []
         self.max_partial_points = 0
 
         self.reconstruction = None
@@ -71,22 +70,18 @@ class Grasping(Network.node):
     def loop(self, data):
         # self.watch.check()
 
-        output = copy.deepcopy(Logging.keys)
+        output = {}
 
         self.timer.start()
         # Input
-        if 'action' in data:
-            self.action = data['action']
-            return {'sink': {}}
 
         logger.info("Read camera input", recurring=True)
 
         rgb = data['rgb']
         depth = data['depth']
 
-        if Logging.debug:
-            output['rgb'] = rgb
-            output['depth'] = depth
+        output['rgb'] = rgb
+        output['depth'] = depth
 
         # Setup transformations
         R = Rotation.from_euler('xyz', [180, 0, 0], degrees=True).as_matrix()
@@ -98,8 +93,7 @@ class Grasping(Network.node):
 
         logger.info("RGB segmented", recurring=True)
 
-        if Logging.debug:
-            output['mask'] = mask
+        output['mask'] = mask
 
         segmented_depth = copy.deepcopy(depth)
         segmented_depth[mask != 1] = 0
@@ -114,10 +108,9 @@ class Grasping(Network.node):
         if (c1:=(self.action != 'give')) or (c2:=(len(segmented_depth.nonzero()[0]) < 4096)):
             if not c1 and c2:
                 logger.warning('Warning: not enough input points. Skipping reconstruction', recurring=True)
-            output['fps'] = 1 / self.timer.compute(stop=True)
-            output = {k: v for k, v, in output.items() if k in Logging.keys}
-            res = {'sink': output}
-            return res
+            output['fps_od'] = 1 / self.timer.compute(stop=True)
+
+            return output
 
         logger.info("Depth segmented", recurring=True)
 
@@ -165,10 +158,8 @@ class Grasping(Network.node):
         if self.reconstruction.shape[0] >= 10_000:
             logger.warning('Corrupted reconstruction - check the input point cloud', recurring=True)
 
-            output['fps'] = 1 / self.timer.compute(stop=True)
-            output = {k: v for k, v, in output.items() if k in Logging.keys}
-            res = {'sink': output}
-            return res
+            output['fps_od'] = 1 / self.timer.compute(stop=True)
+            return output
 
         center = np.mean(
             (np.block(
@@ -184,10 +175,8 @@ class Grasping(Network.node):
 
         if poses is None:
             logger.warning('Corrupted reconstruction - check the input point cloud', recurring=True)
-            output['fps'] = 1 / self.timer.compute(stop=True)
-            output = {k: v for k, v, in output.items() if k in Logging.keys}
-            res = {'sink': output}
-            return res
+            output['fps_od'] = 1 / self.timer.compute(stop=True)
+            return output
 
         hands = np.stack([compose_transformations([poses[1].T, poses[0][np.newaxis] * (var * 2) + mean, R]),
                            compose_transformations([poses[3].T, poses[2][np.newaxis] * (var * 2) + mean, R])], axis=-1)
@@ -203,11 +192,9 @@ class Grasping(Network.node):
             output['reconstruction'] = self.reconstruction
             output['transform'] = denormalize
 
-        output['fps'] = 1 / self.timer.compute(stop=True)
-        output = {k: v for k, v, in output.items() if k in Logging.keys}
-        res = {'sink': output}
+        output['fps_od'] = 1 / self.timer.compute(stop=True)
 
-        return res
+        return output
 
 
 if __name__ == '__main__':

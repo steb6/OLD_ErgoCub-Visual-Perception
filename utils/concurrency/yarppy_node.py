@@ -1,4 +1,6 @@
 # import time
+import copy
+import random
 import time
 from abc import ABC, abstractmethod
 # from collections import OrderedDict
@@ -42,8 +44,11 @@ def connect(manager):
 
 class YarpPyNode(Process, ABC):
 
-    def __init__(self, ip, port, in_queues=None, out_queues=None, blocking=False):
+    def __init__(self, ip, port, in_config=None, out_config=None, blocking=False):
         super(Process, self).__init__()
+
+        self.out_config = out_config
+        self.in_config = in_config
 
         BaseManager.register('get_queue')
         manager = BaseManager(address=(ip, port), authkey=b'abracadabra')
@@ -56,9 +61,9 @@ class YarpPyNode(Process, ABC):
         yarp.Network.init()
 
         self._in_queues = {}
-        if in_queues is not None:
-            for in_q in in_queues:
-                for port in in_queues[in_q]:
+        if in_config is not None:
+            for in_q in in_config:
+                for port in in_config[in_q]:
                     if port == "depth":
                         p = yarp.BufferedPortImageFloat()
 
@@ -82,16 +87,18 @@ class YarpPyNode(Process, ABC):
                         self.yarp_data[f'/{in_q}/{port}'] = rgb_image
                         self.np_buffer[f'/{in_q}/{port}'] = rgb_buffer
 
-                    p.open(f'/{in_q}/{port}_in')
+                    port_id = random.randint(0, 9999)
+                    p.open(f'/{in_q}/{port}_{port_id:04}_in')
                     self._in_queues[f'/{in_q}/{port}'] = p
 
-                    yarp.Network.connect(f'/{in_q}/{port}_out', f'/{in_q}/{port}_in')
-                    print(f"Connecting /{in_q}/{port}_out to /{in_q}/{port}_in")
+                    yarp.Network.connect(f'/{in_q}/{port}_out', f'/{in_q}/{port}_{port_id:04}_in')
+                    print(f"Connecting /{in_q}/{port}_out to /{in_q}/{port}_{port_id:04}_in")
 
-        self._out_queues = {k: manager.get_queue(k) for k in out_queues}
 
-        logger.info(f'Input queue: {", ".join(in_queues) if in_queues is not None else "None"}'
-                    f' - Output queues: {", ".join(out_queues)}')
+        self._out_queues = {k: manager.get_queue(k) for k in out_config}
+
+        logger.info(f'Input queue: {", ".join(in_config) if in_config is not None else "None"}'
+                    f' - Output queues: {", ".join(out_config)}')
 
     def _startup(self):
         logger.info('Starting up...')
@@ -136,11 +143,14 @@ class YarpPyNode(Process, ABC):
 
         while True:
             data = self.loop(data)
-            self._send_all(data)
+            self._send_all(data, self.blocking)
             data = self._recv()
 
     def _send_all(self, data, blocking):
-        for dest in data:
+        for dest in self.out_config:
+            data_dest = copy.deepcopy(self.out_config[dest])
+            data_dest.update(data)  # add computed values while keeping default ones
+            data_dest = {k: v for k, v, in data_dest.items() if k in self.out_config[dest]}  # remove unnecessary keys
 
             msg = {}
             if not blocking:
@@ -150,12 +160,10 @@ class YarpPyNode(Process, ABC):
                     except Empty:
                         break
 
-            msg.update(data[dest])
+            msg.update(data_dest)
             try:
                 self._out_queues[dest].put(msg, block=blocking)
             except Full:
                 pass
 
-    def unpack(self, data):
-        data.find()
 

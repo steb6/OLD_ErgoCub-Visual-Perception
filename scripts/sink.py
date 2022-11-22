@@ -1,16 +1,19 @@
+import sys
+from pathlib import Path
+
 import cv2
 import numpy as np
 from loguru import logger
-from grasping.utils.misc import draw_mask, project_pc, project_hands
-from utils.concurrency import Node
-from utils.logging import setup_logger
-from configs.sink_config import Logging, Network
 
+from utils.logging import setup_logger
+
+sys.path.insert(0,  Path(__file__).parent.parent.as_posix())
+from configs.sink_config import Logging, Network
+from grasping.utils.misc import draw_mask, project_pc, project_hands
 setup_logger(level=Logging.level)
 
-
 @logger.catch(reraise=True)
-class Sink(Node):
+class Sink(Network.node):
     def __init__(self):
         self.img = np.zeros([480, 640, 3], dtype=np.uint8)
         self.mask = None
@@ -26,7 +29,7 @@ class Sink(Node):
         self.edges = None
         self.is_true = None
         self.requires_focus = None
-        super().__init__(**Network.to_dict())
+        super().__init__(**Network.Args.to_dict())
 
     def startup(self):
         logo = cv2.imread('assets/logo.jpg')
@@ -35,8 +38,10 @@ class Sink(Node):
         cv2.waitKey(1)
 
     def loop(self, data: dict) -> dict:
-        if 'img' in data.keys():
-            self.img = data['img']
+        print(data.keys())
+
+        if 'rgb' in data.keys():
+            self.img = data['rgb']
         img = self.img
 
         # GRASPING #####################################################################################################
@@ -52,7 +57,7 @@ class Sink(Node):
         if 'hands' in data.keys():
             self.hands = data['hands']
         if self.hands is not None:
-            img = project_hands(img, self.hands['right'], self.hands['left'])
+            img = project_hands(img, self.hands[..., 0], self.hands[..., 1])
 
         # HUMAN ########################################################################################################
         if 'fps' in data.keys():
@@ -61,8 +66,8 @@ class Sink(Node):
             img = cv2.putText(img, f'FPS: {int(self.fps)}', (10, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
                               cv2.LINE_AA)
 
-        if 'distance' in data.keys():
-            self.distance = data['distance']
+        if 'human_distance' in data.keys():
+            self.distance = data['human_distance']
         if self.distance is not None:
             img = cv2.putText(img, f'DIST: {int(self.distance)}', (200, 20), cv2.FONT_ITALIC, 0.7, (255, 0, 0), 1,
                               cv2.LINE_AA)

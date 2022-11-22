@@ -1,6 +1,10 @@
 import copy
+import sys
+from pathlib import Path
 
 import tensorrt  # TODO NEEDED IN ERGOCUB, NOT NEEDED IN ISBFSAR
+
+sys.path.insert(0,  Path(__file__).parent.parent.as_posix())
 from configs.action_rec_config import Network, HPE, FOCUS, AR, MAIN, Logging  # TODO FIX
 # from pathlib import Path
 
@@ -9,8 +13,7 @@ import numpy as np
 import time
 import cv2
 from multiprocessing import Process, Queue
-import sys
-# sys.path.insert(0,  Path(__file__).parent.parent.as_posix())
+
 
 
 docker = os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False)
@@ -142,7 +145,6 @@ class ISBFSAR(Network.node):
             self.last_data = data
         else:  # It arrives just a message, but we need all
             data.update(self.last_data)
-            print(data.keys())
 
         if "msg" in data.keys() and data["msg"] != '':
 
@@ -173,7 +175,7 @@ class ISBFSAR(Network.node):
             else:
                 log = "Not a valid command!"
         d = self.get_frame(img=data["rgb"], log=log)
-        return {"sink": d}
+        return d
 
     def forget_command(self, flag):
         if self.ar.remove(flag):

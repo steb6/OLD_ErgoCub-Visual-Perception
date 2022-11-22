@@ -7,7 +7,7 @@ from grasping.grasp_detection import RansacGraspDetectorTRT
 from grasping.segmentation.fcn.fcn_segmentator_trt import FcnSegmentatorTRT
 from grasping.shape_completion.confidence_pcr.decoder import ConfidencePCRDecoder
 from grasping.shape_completion.confidence_pcr.encoder import ConfidencePCRDecoderTRT
-from utils.concurrency import YarpSysNode
+from utils.concurrency.yarppy_node import YarpPyNode
 from utils.confort import BaseConfig
 
 
@@ -24,14 +24,19 @@ class Logging(BaseConfig):
 
 class Network(BaseConfig):
 
-    node = YarpSysNode
+    node = YarpPyNode
 
     class Args:
-        in_queues = {'realsense': ['rgb', 'depth']}
-        out_queues = {'sink': ['distance', 'hands']}
+        ip = "localhost"
+        port = 50000
+
+        in_config = {'realsense': ['rgb', 'depth']}
+
+        out_config = {'visualizer': {k: None for k in ['rgb', 'hands', 'mask', 'fps', 'reconstruction', 'planes', 'lines', 'vertices']},
+                      'object_detection_rpc': {'distance': -1,
+                                               'hands': np.full([4, 4, 2], -1.)}}
         # make the output queue blocking (can be used to put a breakpoint in the sink and debug the process output)
         blocking = False
-
 
 class Segmentation(BaseConfig):
     model = FcnSegmentatorTRT

@@ -10,7 +10,6 @@ from loguru import logger
 import yarp
 import sysv_ipc
 import struct
-# print("WHA CI ARRIVO SENZA UN SENSO AHAHAHAHAH :D")
 
 def _exception_handler(function):
     # Graceful shutdown
@@ -63,11 +62,12 @@ class YarpSysNode(Process, ABC):
                         self.yarp_data[f'/{in_q}/{port}'] = rgb_image
                         self.np_buffer[f'/{in_q}/{port}'] = rgb_buffer
 
-                    p.open(f'/{in_q}/{port}_in')
+                    port_id = np.random.randint(9999, size=4)
+                    p.open(f'/{in_q}/{port}_{port_id}_in')
                     self._in_queues[f'/{in_q}/{port}'] = p
 
-                    yarp.Network.connect(f'/{in_q}/{port}_out', f'/{in_q}/{port}_in')
-                    print(f"Connecting /{in_q}/{port}_out to /{in_q}/{port}_in")
+                    yarp.Network.connect(f'/{in_q}/{port}_out', f'/{in_q}/{port}_{port_id}_in')
+                    print(f"Connecting /{in_q}/{port}_out to /{in_q}/{port}_{port_id}_in")
 
         self._out_queues = {}
         for out_q in out_queues:
@@ -126,7 +126,7 @@ class YarpSysNode(Process, ABC):
             data = self._recv()
 
     def _send_all(self, data):
-        data = data['sink']
+        data = data
         msg = b""
 
         for k, v in data.items():
