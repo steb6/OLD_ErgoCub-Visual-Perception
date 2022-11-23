@@ -5,9 +5,8 @@ import cv2
 import numpy as np
 from loguru import logger
 
-from utils.logging import setup_logger
-
 sys.path.insert(0,  Path(__file__).parent.parent.as_posix())
+from utils.logging import setup_logger
 from configs.sink_config import Logging, Network
 from grasping.utils.misc import draw_mask, project_pc, project_hands
 setup_logger(level=Logging.level)

@@ -10,7 +10,7 @@ class Network(BaseConfig):
         port = 50000
 
         in_config = 'action_recognition_rpc'
-        ipc_key = 1234
+        ipc_key = 5678
 
         blocking = False
 

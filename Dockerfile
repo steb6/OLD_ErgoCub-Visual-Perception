@@ -56,6 +56,8 @@ RUN apt-get install -y --no-install-recommends dnsutils
 RUN mkdir -p /home/ecub/.config/yarp/ &&  \
     echo "$(dig host.docker.internal +short) 10000 yarp" > /home/ecub/.config/yarp/yarp.conf
 
+RUN apt-get install tmux
+
 #ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/usr/local/cuda-11.3/lib:/usr/local/cuda-11.3/lib64:/usr/local/cuda-11.3/compat"
 ENV PATH="/opt/conda/bin:/opt/conda/condabin:${PATH}"
 ENV AM_I_IN_A_DOCKER_CONTAINER Yes

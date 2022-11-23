@@ -3,9 +3,12 @@ import threading
 from collections import defaultdict
 from multiprocessing import process
 from multiprocessing.managers import BaseManager
+from pathlib import Path
 from queue import Queue
 
 from loguru import logger
+
+sys.path.insert(0,  Path(__file__).parent.parent.as_posix())
 
 from utils.logging import setup_logger
 from configs.manager_config import Logging, Network
