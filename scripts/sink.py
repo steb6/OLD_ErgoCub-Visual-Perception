@@ -37,7 +37,7 @@ class Sink(Network.node):
         cv2.waitKey(1)
 
     def loop(self, data: dict) -> dict:
-        print(data.keys())
+        # print(data.keys())
 
         if 'rgb' in data.keys():
             self.img = data['rgb']

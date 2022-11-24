@@ -136,7 +136,7 @@ class ISBFSAR(Network.node):
         if log is not None:
             elements["log"] = log
 
-        return {k: v for k, v, in elements.items() if k in Logging.keys}
+        return elements
 
     def loop(self, data):
         log = None
