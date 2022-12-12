@@ -25,7 +25,9 @@ class Logging(BaseConfig):
 
     debug = True
     # options: rgb depth mask 'fps center hands partial scene reconstruction transform
-    keys = {'action': -1, 'human_distance': -1., 'focus': False}
+    keys = {'action': -1, 'human_distance': -1., 'focus': False,  # Used by rpc
+            'bbox': None, 'face_bbox': None, 'pose': None, 'actions': None, 'edges': None, 'is_true': -1,  # Debugging
+            'requires_focus': False}  # Debugging
 
 
 class MAIN(BaseConfig):

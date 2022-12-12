@@ -1,7 +1,7 @@
 import copy
 import sys
 from pathlib import Path
-
+import cv2
 from loguru import logger
 
 sys.path.insert(0, Path(__file__).parent.parent.as_posix())
@@ -27,6 +27,8 @@ class Source(Network.node):
         while True:
             try:
                 rgb, depth = self.camera.read()
+                # cv2.imshow("", rgb)
+                # cv2.waitKey(1)
                 data = {'rgb': copy.deepcopy(rgb), 'depth': copy.deepcopy(depth)}
 
                 return {k: data for k in Network.Args.out_queues}

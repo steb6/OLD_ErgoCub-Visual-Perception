@@ -31,13 +31,13 @@ class Sink(Network.node):
         super().__init__(**Network.Args.to_dict())
 
     def startup(self):
-        logo = cv2.imread('assets/logo.jpg')
-        logo = cv2.resize(logo, (640, 480))
-        cv2.imshow('Ergocub-Visual-Perception', np.array(logo, dtype=np.uint8))
-        cv2.waitKey(1)
+        # logo = cv2.imread('assets/logo.jpg')
+        # logo = cv2.resize(logo, (640, 480))
+        # cv2.imshow('Ergocub-Visual-Perception', np.array(logo, dtype=np.uint8))
+        # cv2.waitKey(1)
+        pass
 
     def loop(self, data: dict) -> dict:
-        # print(data.keys())
 
         if 'rgb' in data.keys():
             self.img = data['rgb']
@@ -77,10 +77,10 @@ class Sink(Network.node):
             img = cv2.putText(img, "FOCUS" if self.focus else "NOT FOCUS", (400, 20), cv2.FONT_ITALIC, 0.7,
                               (0, 255, 0) if self.focus else (0, 0, 255), 1, cv2.LINE_AA)
 
-        if 'pose' in data.keys() and self.hands is None:
+        if 'pose' in data.keys():  # and self.hands is None:
             self.pose = data["pose"]
             self.edges = data["edges"]
-        if self.pose is not None and self.hands is None:
+        if self.pose is not None:  # and self.hands is None:
             img = cv2.rectangle(img, (0, 430), (50, 480), (255, 255, 255), cv2.FILLED)
             for edge in self.edges:
                 p0 = [int((p*50)+50) for p in self.pose[edge[0]][:2]]
@@ -93,7 +93,7 @@ class Sink(Network.node):
 
         if 'bbox' in data:
             self.bbox = data["bbox"]
-        if self.bbox is not None and self.hands is None:
+        if self.bbox is not None:  # and self.hands is None:
             x1, x2, y1, y2 = self.bbox
             img = cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 3)
 
